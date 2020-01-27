@@ -159,9 +159,16 @@ Isochrone::Compute(google::protobuf::RepeatedPtrField<valhalla::Location>& origi
 
   LOGLN_WARN("Compute");
   std::cout<<("Compute")<<std::endl;
+
   // Initialize and create the isotile
   ConstructIsoTile(false, max_minutes, origin_locations);
-  uint32_t n = 0; // TODO What is/was this used for
+
+  // Paint the origin since we no longer can customize SetOriginLocations to do this
+  for (auto& origin : origin_locations) {
+    PointLL ll(origin.ll().lng(), origin.ll().lat());
+    // Set time at the origin lat, lon grid to 0
+    isotile_->Set(ll, 0);
+  }
 
   Dijkstras::Compute(origin_locations, graphreader, mode_costing, mode);
 
@@ -181,6 +188,13 @@ Isochrone::ComputeReverse(google::protobuf::RepeatedPtrField<valhalla::Location>
   // Initialize and create the isotile
   ConstructIsoTile(false, max_minutes, dest_locations);
 
+  // Paint the dest_locations since we no longer can customize SetOriginLocations to do this
+  for (auto& dest : dest_locations) {
+    PointLL ll(dest.ll().lng(), dest.ll().lat());
+    // Set time at the origin lat, lon grid to 0
+    isotile_->Set(ll, 0);
+  }
+
   Dijkstras::ComputeReverse(dest_locations, graphreader, mode_costing, mode);
 
   return isotile_;
@@ -198,6 +212,13 @@ Isochrone::ComputeMultiModal(google::protobuf::RepeatedPtrField<valhalla::Locati
   std::cout<<("ComputeMultiModal")<<std::endl;
   // Initialize and create the isotile
   ConstructIsoTile(true, max_minutes, origin_locations);
+
+  // Paint the origin since we no longer can customize SetOriginLocations to do this
+  for (auto& origin : origin_locations) {
+    PointLL ll(origin.ll().lng(), origin.ll().lat());
+    // Set time at the origin lat, lon grid to 0
+    isotile_->Set(ll, 0);
+  }
 
   Dijkstras::ComputeMultiModal(origin_locations, graphreader, mode_costing, mode);
 
