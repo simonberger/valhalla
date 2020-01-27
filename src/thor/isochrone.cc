@@ -325,6 +325,7 @@ void Isochrone::ExpandingNode(baldr::GraphReader& graphreader,
     if (info.routing_type == InfoRoutingType::multi_modal) {
       secs0 = (idx == kInvalidLabel) ? 0 : mmedgelabels_[idx].cost().secs;
     } else {
+      // NOTE                              v old isochrone::ExpandForward used edgelabels (not bd)
       secs0 = (idx == kInvalidLabel) ? 0 : bdedgelabels_[idx].cost().secs;
     }
     UpdateIsoTile(pred, graphreader, ll, secs0);
