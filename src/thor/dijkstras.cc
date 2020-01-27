@@ -296,6 +296,9 @@ void Dijkstras::Compute(google::protobuf::RepeatedPtrField<valhalla::Location>& 
       seconds_of_week -= midgard::kSecondsPerWeek;
     }
 
+    // Expand from the end node in forward direction.
+    ExpandForward(graphreader, pred.endnode(), pred, predindex, false, localtime, seconds_of_week);
+
     auto cb_decision = RouteCallbackDecideAction(graphreader, pred, InfoRoutingType::forward);
     if (cb_decision == RouteCallbackRecommendedAction::skip_expansion) {
       continue;
@@ -303,10 +306,6 @@ void Dijkstras::Compute(google::protobuf::RepeatedPtrField<valhalla::Location>& 
       return;
     }
 
-    // Expand from the end node in forward direction.
-    ExpandForward(graphreader, pred.endnode(), pred, predindex, false, localtime, seconds_of_week);
-
-    // TODO: need a way to stop the expansion
   }
 }
 

@@ -70,6 +70,7 @@ void Isochrone::ConstructIsoTile(
     const bool multimodal,
     const unsigned int max_minutes,
     google::protobuf::RepeatedPtrField<valhalla::Location>& origin_locations) {
+  std::cout<<("ConstructIsoTile")<<std::endl;
   float max_distance;
   max_seconds_ = max_minutes * 60;
   if (multimodal) {
@@ -156,8 +157,9 @@ Isochrone::Compute(google::protobuf::RepeatedPtrField<valhalla::Location>& origi
                    const std::shared_ptr<DynamicCost>* mode_costing,
                    const TravelMode mode) {
 
+  LOGLN_WARN("Compute");
+  std::cout<<("Compute")<<std::endl;
   // Initialize and create the isotile
-  max_seconds_ = max_minutes * 60;
   ConstructIsoTile(false, max_minutes, origin_locations);
   uint32_t n = 0; // TODO What is/was this used for
 
@@ -174,8 +176,9 @@ Isochrone::ComputeReverse(google::protobuf::RepeatedPtrField<valhalla::Location>
                           const std::shared_ptr<DynamicCost>* mode_costing,
                           const TravelMode mode) {
 
+  LOGLN_WARN("ComputeReverse");
+  std::cout<<("ComputeReverse")<<std::endl;
   // Initialize and create the isotile
-  max_seconds_ = max_minutes * 60;
   ConstructIsoTile(false, max_minutes, dest_locations);
 
   Dijkstras::ComputeReverse(dest_locations, graphreader, mode_costing, mode);
@@ -190,8 +193,10 @@ Isochrone::ComputeMultiModal(google::protobuf::RepeatedPtrField<valhalla::Locati
                              GraphReader& graphreader,
                              const std::shared_ptr<DynamicCost>* mode_costing,
                              const TravelMode mode) {
+
+  LOGLN_WARN("ComputeMultiModal");
+  std::cout<<("ComputeMultiModal")<<std::endl;
   // Initialize and create the isotile
-  max_seconds_ = max_minutes * 60;
   ConstructIsoTile(true, max_minutes, origin_locations);
 
   Dijkstras::ComputeMultiModal(origin_locations, graphreader, mode_costing, mode);
@@ -244,7 +249,7 @@ void Isochrone::UpdateIsoTile(const EdgeLabel& pred,
     } else {
       // Find intersecting tiles (using a Bresenham method)
       auto tiles = isotile_->Intersect(std::list<PointLL>{ll0, ll});
-      for (auto t : tiles) {
+      for (const auto& t : tiles) {
         isotile_->SetIfLessThan(t.first, secs1 * kMinPerSec);
       }
     }
@@ -285,7 +290,7 @@ void Isochrone::UpdateIsoTile(const EdgeLabel& pred,
     } else {
       // Find intersecting tiles (using a Bresenham method)
       auto tiles = isotile_->Intersect(std::list<PointLL>{*itr1, *itr2});
-      for (auto t : tiles) {
+      for (const auto& t : tiles) {
         isotile_->SetIfLessThan(t.first, minutes);
       }
     }
@@ -337,6 +342,7 @@ Isochrone::RouteCallbackDecideAction(baldr::GraphReader& graphreader,
     }
   }
   if (pred.cost().secs > max_seconds_ || pred.cost().cost > max_seconds_ * 4) {
+      std::cout << "Aborting ExpandForward since "<<pred.cost().secs<<" > "<< max_seconds_<<" or "<< pred.cost().cost<<" > "<< max_seconds_ * 4<<std::endl;
     LOG_DEBUG("Exceed time interval: n = " + std::to_string(n));
     return RouteCallbackRecommendedAction::stop_expansion;
   }

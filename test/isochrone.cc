@@ -72,6 +72,7 @@ void try_isochrone(GraphReader& reader,
                    thor_worker_t& thor_worker,
                    const char* test_request,
                    const rapidjson::Document& expected) {
+  std::cout << ("Testing isochrone")<<std::endl;
   Api request;
   ParseApi(test_request, Options::isochrone, request);
   loki_worker.isochrones(request);
