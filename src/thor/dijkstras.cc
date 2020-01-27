@@ -276,8 +276,10 @@ void Dijkstras::Compute(google::protobuf::RepeatedPtrField<valhalla::Location>& 
   auto node_id = bdedgelabels_.empty() ? GraphId{} : bdedgelabels_[0].endnode();
   std::tie(start_time, start_seconds_of_week) = SetTime(origin_locations, node_id, graphreader);
 
+  int laps = 0;
   // Compute the isotile
   while (true) {
+    laps += 1;
     // Get next element from adjacency list. Check that it is valid. An
     // invalid label indicates there are no edges that can be expanded.
     uint32_t predindex = adjacencylist_->pop();
@@ -303,6 +305,7 @@ void Dijkstras::Compute(google::protobuf::RepeatedPtrField<valhalla::Location>& 
     if (cb_decision == RouteCallbackRecommendedAction::skip_expansion) {
       continue;
     } else if (cb_decision == RouteCallbackRecommendedAction::stop_expansion) {
+      std::cout << "did "<<laps<<" laps before exiting"<<std::endl;
       return;
     }
 
@@ -820,16 +823,16 @@ void Dijkstras::ComputeMultiModal(
     MMEdgeLabel pred = mmedgelabels_[predindex];
     edgestatus_.Update(pred.edgeid(), EdgeSet::kPermanent);
 
+    // Expand from the end node of the predecessor edge.
+    ExpandForwardMultiModal(graphreader, pred.endnode(), pred, predindex, false, pc, tc,
+                            mode_costing);
+
     auto cb_decision = RouteCallbackDecideAction(graphreader, pred, InfoRoutingType::multi_modal);
     if (cb_decision == RouteCallbackRecommendedAction::skip_expansion) {
       continue;
     } else if (cb_decision == RouteCallbackRecommendedAction::stop_expansion) {
       return;
     }
-
-    // Expand from the end node of the predecessor edge.
-    ExpandForwardMultiModal(graphreader, pred.endnode(), pred, predindex, false, pc, tc,
-                            mode_costing);
   }
 }
 
