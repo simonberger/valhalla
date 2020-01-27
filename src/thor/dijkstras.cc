@@ -160,7 +160,7 @@ void Dijkstras::ExpandForward(GraphReader& graphreader,
 
   if (nodeinfo) {
     ExpandingNode(graphreader, pred,
-                  ExpandingNodeMiscInfo{InfoEdgeType::regular, InfoRoutingType::bidirectional,
+                  ExpandingNodeMiscInfo{InfoEdgeType::regular, InfoRoutingType::forward,
                                         from_transition});
   }
 
@@ -331,7 +331,11 @@ void Dijkstras::ExpandReverse(GraphReader& graphreader,
   // Get the nodeinfo
   const NodeInfo* nodeinfo = tile->node(node);
 
-  // TODO: inform someone that we expanded to this node
+  if (nodeinfo) {
+    ExpandingNode(graphreader, pred,
+                  ExpandingNodeMiscInfo{InfoEdgeType::regular, InfoRoutingType::reverse,
+                                        from_transition});
+  }
 
   // Bail if we cant expand from here
   if (!costing_->Allowed(nodeinfo)) {
@@ -842,6 +846,7 @@ void Dijkstras::SetOriginLocations(GraphReader& graphreader,
                                    const std::shared_ptr<DynamicCost>& costing) {
   // Add edges for each location to the adjacency list
   for (auto& location : locations) {
+    // TODO: Set origin to time 0 somehow
 
     // Only skip inbound edges if we have other options
     bool has_other_edges = false;
@@ -899,9 +904,8 @@ void Dijkstras::SetOriginLocations(GraphReader& graphreader,
       adjacencylist_->add(idx);
       edgestatus_.Set(edgeid, EdgeSet::kTemporary, idx, tile);
 
-      // TODO: inform someone we used this edge
       ExpandingNode(graphreader, bdedgelabels_.back(),
-                    ExpandingNodeMiscInfo{InfoEdgeType::origin, InfoRoutingType::bidirectional});
+                    ExpandingNodeMiscInfo{InfoEdgeType::origin, InfoRoutingType::forward});
     }
   }
 }
@@ -967,7 +971,8 @@ void Dijkstras::SetDestinationLocations(
       adjacencylist_->add(idx);
       edgestatus_.Set(opp_edge_id, EdgeSet::kTemporary, idx, graphreader.GetGraphTile(opp_edge_id));
 
-      // TODO: inform someone we used this edge
+      ExpandingNode(graphreader, bdedgelabels_.back(),
+                    ExpandingNodeMiscInfo{InfoEdgeType::destination, InfoRoutingType::reverse});
     }
   }
 }

@@ -27,7 +27,7 @@ enum class InfoEdgeType {
 };
 enum class InfoRoutingType {
   forward,
-  bidirectional,
+  reverse,
   multi_modal,
 };
 

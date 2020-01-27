@@ -326,6 +326,8 @@ void Isochrone::ExpandingNode(baldr::GraphReader& graphreader,
       secs0 = (idx == kInvalidLabel) ? 0 : mmedgelabels_[idx].cost().secs;
     } else {
       // NOTE                              v old isochrone::ExpandForward used edgelabels (not bd)
+      // Maybe doesn't matter because reverse is never called
+      //
       secs0 = (idx == kInvalidLabel) ? 0 : bdedgelabels_[idx].cost().secs;
     }
     UpdateIsoTile(pred, graphreader, ll, secs0);
