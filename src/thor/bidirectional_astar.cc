@@ -649,9 +649,10 @@ bool BidirectionalAStar::SetForwardConnection(GraphReader& graphreader, const BD
   EdgeStatusInfo oppedgestatus = edgestatus_reverse_.Get(oppedge);
   auto opp_pred = edgelabels_reverse_[oppedgestatus.index()];
 
+  // Disallow connections that are part of a complex restriction
   if (pred.on_complex_rest()) {
     // Lets dig deeper and test if we are really triggering these restrictions
-
+    // since the complex restriction can span many edges
     if (IsBridgingEdgeRestricted(graphreader, true, edgelabels_forward_, edgelabels_reverse_, pred,
                                  opp_pred, costing_)) {
       return false;
@@ -700,8 +701,11 @@ bool BidirectionalAStar::SetReverseConnection(GraphReader& graphreader, const BD
   GraphId oppedge = pred.opp_edgeid();
   EdgeStatusInfo oppedgestatus = edgestatus_forward_.Get(oppedge);
   auto opp_pred = edgelabels_reverse_[oppedgestatus.index()];
+
+  // Disallow connections that are part of a complex restriction
   if (pred.on_complex_rest()) {
     // Lets dig deeper and test if we are really triggering these restrictions
+    // since the complex restriction can span many edges
     if (IsBridgingEdgeRestricted(graphreader, false, edgelabels_reverse_, edgelabels_forward_, pred,
                                  opp_pred, costing_)) {
       return false;
