@@ -234,8 +234,7 @@ inline bool BidirectionalAStar::ExpandForwardInner(GraphReader& graphreader,
   bool has_time_restrictions = false;
   if (!costing_->Allowed(meta.edge, pred, tile, meta.edge_id, localtime, tz_index,
                          has_time_restrictions) ||
-      costing_->Restricted(meta.edge, pred, edgelabels_forward_,
-                           (const std::vector<sif::BDEdgeLabel>*)nullptr, tile, meta.edge_id, true,
+      costing_->Restricted(meta.edge, pred, edgelabels_forward_, tile, meta.edge_id, true,
                            &edgestatus_forward_, localtime, tz_index)) {
     return false;
   }
@@ -433,8 +432,7 @@ inline bool BidirectionalAStar::ExpandReverseInner(GraphReader& graphreader,
   bool has_time_restrictions = false;
   if (!costing_->AllowedReverse(meta.edge, pred, opp_edge, t2, opp_edge_id, localtime, tz_index,
                                 has_time_restrictions) ||
-      costing_->Restricted(meta.edge, pred, edgelabels_reverse_,
-                           (const std::vector<sif::BDEdgeLabel>*)nullptr, tile, meta.edge_id, false,
+      costing_->Restricted(meta.edge, pred, edgelabels_reverse_, tile, meta.edge_id, false,
                            &edgestatus_reverse_, localtime, tz_index)) {
     return false;
   }

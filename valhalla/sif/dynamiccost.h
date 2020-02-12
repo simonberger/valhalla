@@ -280,7 +280,6 @@ public:
   bool Restricted(const baldr::DirectedEdge* edge,
                   const EdgeLabel& pred,
                   const edge_labels_container_t& edge_labels,
-                  const edge_labels_container_t* edge_labels_opposite_direction,
                   const baldr::GraphTile*& tile,
                   const baldr::GraphId& edgeid,
                   const bool forward,
@@ -288,19 +287,11 @@ public:
                   const uint64_t current_time = 0,
                   const uint32_t tz_index = 0) const {
     // Lambda to get the next predecessor EdgeLabel (that is not a transition)
-    auto next_predecessor = [&edge_labels, &edge_labels_opposite_direction](const EdgeLabel* label) {
+    auto next_predecessor = [&edge_labels](const EdgeLabel* label) {
       // Get the next predecessor - make sure it is valid. Continue to get
       // the next predecessor if the edge is a transition edge.
       const EdgeLabel* next_pred =
           (label->predecessor() == baldr::kInvalidLabel) ? label : &edge_labels[label->predecessor()];
-      if (next_pred == label && edge_labels_opposite_direction) {
-        // TODO How to find the edgelabel in opposite_direction?
-        // We don't have a pointer to the index here
-        // edge_labels_container_t* = nullptr;
-        // for (auto label : edge_labels_opposite_direction) {
-
-        //}
-      }
       return next_pred;
     };
     auto reset_edge_status =
