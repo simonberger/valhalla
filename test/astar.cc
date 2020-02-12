@@ -1617,11 +1617,11 @@ TEST(Astar, test_complex_restriction_short_path_melborne) {
 
   auto response = tester.test(request);
 
-  const auto& legs = response.trip().routes(0).legs();
+  const auto& leg = response.trip().routes(0).legs(0);
   const auto& directions = response.directions().routes(0).legs();
 
-  EXPECT_EQ(legs.size(), 1);
-  EXPECT_EQ(legs.at(0).shape(), "psmwfAmlggtG|N}TzAzAzAzAxLhM");
+  // EXPECT_EQ(legs.size(), 1);
+  EXPECT_EQ(leg.shape(), "psmwfAmlggtG|N}TzAzAzAzAxLhM");
 }
 
 TEST(Astar, test_IsBridgingEdgeRestricted) {
