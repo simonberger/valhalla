@@ -2,7 +2,6 @@
 #include "baldr/datetime.h"
 #include "baldr/directededge.h"
 #include "baldr/graphid.h"
-#include "baldr/graphtile.h"
 #include "midgard/encoded.h"
 #include "midgard/logging.h"
 #include "sif/edgelabel.h"
@@ -270,6 +269,7 @@ inline bool BidirectionalAStar::ExpandForwardInner(GraphReader& graphreader,
   float dist = 0.0f;
   float sortcost =
       newcost.cost + astarheuristic_forward_.Get(t2->get_node_ll(meta.edge->endnode()), dist);
+
   // Add edge label, add to the adjacency list and set edge status
   uint32_t idx = edgelabels_forward_.size();
   edgelabels_forward_.emplace_back(pred_idx, meta.edge_id, opp_edge_id, meta.edge, newcost, sortcost,
@@ -482,7 +482,7 @@ inline bool BidirectionalAStar::ExpandReverseInner(GraphReader& graphreader,
 
 // Calculate best path using bi-directional A*. No hierarchies or time
 // dependencies are used. Suitable for pedestrian routes (and bicycle?).
-std::vector<std::vector<thor::PathInfo>>
+std::vector<std::vector<PathInfo>>
 BidirectionalAStar::GetBestPath(valhalla::Location& origin,
                                 valhalla::Location& destination,
                                 GraphReader& graphreader,
@@ -529,6 +529,7 @@ BidirectionalAStar::GetBestPath(valhalla::Location& origin,
       forward_pred_idx = adjacencylist_forward_->pop();
       if (forward_pred_idx != kInvalidLabel) {
         fwd_pred = edgelabels_forward_[forward_pred_idx];
+
         // Terminate if the cost threshold has been exceeded.
         if (fwd_pred.sortcost() + cost_diff_ > threshold_) {
           return FormPath(graphreader, options);
@@ -849,7 +850,6 @@ void BidirectionalAStar::SetDestination(GraphReader& graphreader, const valhalla
     if (costing_->AvoidAsDestinationEdge(edgeid, edge.percent_along())) {
       continue;
     }
-
     // Get the directed edge
     const GraphTile* tile = graphreader.GetGraphTile(edgeid);
     const DirectedEdge* directededge = tile->directededge(edgeid);

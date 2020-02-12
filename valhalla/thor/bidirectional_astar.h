@@ -123,11 +123,11 @@ protected:
   /**
    * Expand from the node along the forward search path.
    */
-  virtual bool ExpandForward(baldr::GraphReader& graphreader,
-                             const baldr::GraphId& node,
-                             sif::BDEdgeLabel& pred,
-                             const uint32_t pred_idx,
-                             const bool from_transition);
+  bool ExpandForward(baldr::GraphReader& graphreader,
+                     const baldr::GraphId& node,
+                     sif::BDEdgeLabel& pred,
+                     const uint32_t pred_idx,
+                     const bool from_transition);
   // Private helper function for `ExpandForward`
   bool ExpandForwardInner(baldr::GraphReader& graphreader,
                           const sif::BDEdgeLabel& pred,
@@ -140,12 +140,12 @@ protected:
   /**
    * Expand from the node along the reverse search path.
    */
-  virtual bool ExpandReverse(baldr::GraphReader& graphreader,
-                             const baldr::GraphId& node,
-                             sif::BDEdgeLabel& pred,
-                             const uint32_t pred_idx,
-                             const baldr::DirectedEdge* opp_pred_edge,
-                             const bool from_transition);
+  bool ExpandReverse(baldr::GraphReader& graphreader,
+                     const baldr::GraphId& node,
+                     sif::BDEdgeLabel& pred,
+                     const uint32_t pred_idx,
+                     const baldr::DirectedEdge* opp_pred_edge,
+                     const bool from_transition);
 
   // Private helper function for `ExpandReverse`
   bool ExpandReverseInner(baldr::GraphReader& graphreader,
@@ -177,7 +177,7 @@ protected:
    * @param  pred  Edge label of the predecessor.
    * @return Returns true if a connection was set, false if not (if on a complex restriction).
    */
-  virtual bool SetForwardConnection(baldr::GraphReader& graphreader, const sif::BDEdgeLabel& pred);
+  bool SetForwardConnection(baldr::GraphReader& graphreader, const sif::BDEdgeLabel& pred);
 
   /**
    * The edge on the reverse search connects to a reached edge on the forward
@@ -186,7 +186,7 @@ protected:
    * @param  pred  Edge label of the predecessor.
    * @return Returns true if a connection was set, false if not (if on a complex restriction).
    */
-  virtual bool SetReverseConnection(baldr::GraphReader& graphreader, const sif::BDEdgeLabel& pred);
+  bool SetReverseConnection(baldr::GraphReader& graphreader, const sif::BDEdgeLabel& pred);
 
   /**
    * Form the path from the adjacency lists. Recovers the path from the

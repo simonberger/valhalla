@@ -254,8 +254,7 @@ void Isochrone::ExpandForward(GraphReader& graphreader,
     } else {
       // TODO merge these two branches
       if (!costing_->Allowed(directededge, pred, tile, edgeid, 0, 0, has_time_restrictions) ||
-          costing_->Restricted(directededge, pred, edgelabels_, tile, edgeid, true, todo, localtime,
-                               nodeinfo->timezone())) {
+          costing_->Restricted(directededge, pred, edgelabels_, tile, edgeid, true)) {
         continue;
       }
     }
@@ -450,8 +449,7 @@ void Isochrone::ExpandReverse(GraphReader& graphreader,
     } else {
       if (!costing_->AllowedReverse(directededge, pred, opp_edge, t2, oppedge, 0, 0,
                                     has_time_restrictions) ||
-          costing_->Restricted(directededge, pred, bdedgelabels_, tile, edgeid, false, nullptr,
-                               localtime, nodeinfo->timezone())) {
+          costing_->Restricted(directededge, pred, bdedgelabels_, tile, edgeid, false)) {
         continue;
       }
     }
