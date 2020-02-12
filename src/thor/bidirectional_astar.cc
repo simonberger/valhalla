@@ -703,35 +703,34 @@ bool BidirectionalAStar::SetForwardConnection(GraphReader& graphreader, const BD
 // search tree. Check if this is the best connection so far and set the
 // search threshold.
 bool BidirectionalAStar::SetReverseConnection(GraphReader& graphreader, const BDEdgeLabel& pred) {
+  GraphId oppedge = pred.opp_edgeid();
+  EdgeStatusInfo oppedgestatus = edgestatus_forward_.Get(oppedge);
+  auto opp_pred = edgelabels_reverse_[oppedgestatus.index()];
   std::cout << "SetReverseConnection: " << pred.edgeid().id() << ", on_complex_rest "
             << pred.on_complex_rest() << std::endl;
   if (pred.on_complex_rest()) {
-    return false;
     // Lets dig deeper and test if we are really triggering these restrictions
-    // if (IsBridgingEdgeRestricted(graphreader, false, edgelabels_reverse_, edgelabels_forward_,
-    // pred,
-    //                             costing_)) {
-    //  return false;
-    //}
+    if (IsBridgingEdgeRestricted(graphreader, false, edgelabels_reverse_, edgelabels_forward_, pred,
+                                 opp_pred, costing_)) {
+      return false;
+    }
   }
 
   // Get the opposing edge - a candidate shortest path has been found to the
   // end node of this directed edge. Get total cost.
   float c;
-  GraphId oppedge = pred.opp_edgeid();
-  EdgeStatusInfo oppedgestatus = edgestatus_forward_.Get(oppedge);
   if (pred.predecessor() != kInvalidLabel) {
     // Get the start of the predecessor edge on the reverse path. Cost is to
     // the end this edge, plus the cost to the end of the forward predecessor,
     // plus the transition cost.
-    c = edgelabels_reverse_[pred.predecessor()].cost().cost +
-        edgelabels_forward_[oppedgestatus.index()].cost().cost + pred.transition_cost();
+    c = edgelabels_reverse_[pred.predecessor()].cost().cost + opp_pred.cost().cost +
+        pred.transition_cost();
   } else {
     // If no predecessor on the reverse path get the predecessor on
     // the forward path to form the cost.
-    uint32_t predidx = edgelabels_forward_[oppedgestatus.index()].predecessor();
+    uint32_t predidx = opp_pred.predecessor();
     float oppcost = (predidx == kInvalidLabel) ? 0 : edgelabels_forward_[predidx].cost().cost;
-    c = pred.cost().cost + oppcost + edgelabels_forward_[oppedgestatus.index()].transition_cost();
+    c = pred.cost().cost + oppcost + opp_pred.transition_cost();
   }
 
   // Set best_connection if cost is less than the best cost so far.
@@ -1021,7 +1020,11 @@ bool IsBridgingEdgeRestricted(GraphReader& graphreader,
   patch_path.reserve(PATCH_PATH_SIZE);
 
   // Add pred to patch path
-  patch_path.push_back(pred.edgeid());
+  if (is_forward) {
+    patch_path.push_back(pred.edgeid());
+  } else {
+    patch_path.push_back(opp_pred.edgeid());
+  }
 
   // Track what restriction ids we've seen (via ids + beginning id)
   std::vector<std::vector<GraphId>> lists_of_restriction_ids;
@@ -1049,7 +1052,9 @@ bool IsBridgingEdgeRestricted(GraphReader& graphreader,
     const auto edgeid = next_pred.edgeid();
     const auto tile = graphreader.GetGraphTile(edgeid);
     const auto edge = tile->directededge(edgeid);
-    std::cout << "    Checking restrictions edge_id "<<edgeid.id()<<", is_forward "<<is_forward<<", start_restriction() "<<edge->start_restriction()<<", access_mode "<<costing->access_mode()<<std::endl;
+    std::cout << "    Checking restrictions edge_id " << edgeid.id() << ", is_forward " << is_forward
+              << ", start_restriction() " << edge->start_restriction() << ", access_mode "
+              << costing->access_mode() << std::endl;
     // If is_forward, check if the edge marks the beginning of a restriction, else check
     // if the edge marks the end of a complex restriction. (opposite from DynamicCost::Restricted)
     if ((is_forward && (edge->start_restriction() & costing->access_mode())) ||
@@ -1098,7 +1103,7 @@ bool IsBridgingEdgeRestricted(GraphReader& graphreader,
     // We need the opposing edge graph-id as the rest of the patch_path consists of
     // edges pointing to the right
     // TODO Double check if we need the opposing edge id
-    //auto edgeid = next_opp_pred.opp_edgeid();
+    // auto edgeid = next_opp_pred.opp_edgeid();
     auto edgeid = next_opp_pred.edgeid();
     std::cout << "   next_opp_pred " << next_opp_pred.edgeid().id() << " edgeid " << edgeid
               << std::endl;

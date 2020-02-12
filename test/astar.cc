@@ -221,9 +221,15 @@ void make_tile() {
     // preventing turn from 14 -> 18
     tile.directededges().back().complex_restriction(true);
     ComplexRestrictionBuilder complex_restr_edge_14_18;
-    complex_restr_edge_14_18.set_from_id(make_graph_id(14));
-    complex_restr_edge_14_18.set_to_id(make_graph_id(18));
+    // TODO I switched set_to with set_from after looking at
+    // implementation of GraphTile::GetRestrictions but it sounds backwards to me...
+    complex_restr_edge_14_18.set_to_id(make_graph_id(14));
+    complex_restr_edge_14_18.set_from_id(make_graph_id(18));
     complex_restr_edge_14_18.set_modes(kAllAccess);
+    std::vector<GraphId> vias;
+    vias.push_back(make_graph_id(14));
+    vias.push_back(make_graph_id(21));
+    complex_restr_edge_14_18.set_via_list(vias);
     tile.AddForwardComplexRestriction(complex_restr_edge_14_18);
     tile.AddReverseComplexRestriction(complex_restr_edge_14_18);
   }
@@ -273,6 +279,10 @@ void make_tile() {
     // implementation of GraphTile::GetRestrictions but it sounds backwards to me...
     complex_restr_edge_21_14.set_to_id(make_graph_id(21));
     complex_restr_edge_21_14.set_from_id(make_graph_id(14));
+    std::vector<GraphId> vias;
+    vias.push_back(make_graph_id(14));
+    vias.push_back(make_graph_id(18));
+    complex_restr_edge_21_14.set_via_list(vias);
     complex_restr_edge_21_14.set_modes(kAllAccess);
     tile.AddForwardComplexRestriction(complex_restr_edge_21_14);
     tile.AddReverseComplexRestriction(complex_restr_edge_21_14);
@@ -1741,10 +1751,18 @@ TEST(Astar, test_IsBridgingEdgeRestricted) {
                            make_graph_id(16), make_graph_id(14), &edge_16, vs::Cost{}, 0.0, 0.0,
                            vs::TravelMode::kDrive, vs::Cost{}, false, false);
 
-  const bool is_forward = true;
-
-  ASSERT_TRUE(vt::IsBridgingEdgeRestricted(*reader, is_forward, edge_labels,
-                                           edge_labels_opposite_direction, pred, opp_pred, costing));
+  {
+    const bool is_forward = true;
+    ASSERT_TRUE(vt::IsBridgingEdgeRestricted(*reader, is_forward, edge_labels,
+                                             edge_labels_opposite_direction, pred, opp_pred,
+                                             costing));
+  }
+  LOG_INFO("Next, switch to verify reverse expansion");
+  {
+    const bool is_forward = false;
+    ASSERT_TRUE(vt::IsBridgingEdgeRestricted(*reader, is_forward, edge_labels_opposite_direction,
+                                             edge_labels, opp_pred, pred, costing));
+  }
 }
 
 class AstarTestEnv : public ::testing::Environment {
