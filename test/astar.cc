@@ -266,11 +266,13 @@ void make_tile() {
   {
     // Add first part of complex turn restriction CLOCKWISE direction
     // preventing turn from 21 -> 14
-    tile.directededges().back().set_start_restriction(kAutoAccess);
+    tile.directededges().back().set_start_restriction(kAllAccess);
     tile.directededges().back().complex_restriction(true);
     ComplexRestrictionBuilder complex_restr_edge_21_14;
-    complex_restr_edge_21_14.set_from_id(make_graph_id(21));
-    complex_restr_edge_21_14.set_to_id(make_graph_id(14));
+    // TODO I switched set_to with set_from after looking at
+    // implementation of GraphTile::GetRestrictions but it sounds backwards to me...
+    complex_restr_edge_21_14.set_to_id(make_graph_id(21));
+    complex_restr_edge_21_14.set_from_id(make_graph_id(14));
     complex_restr_edge_21_14.set_modes(kAllAccess);
     tile.AddForwardComplexRestriction(complex_restr_edge_21_14);
     tile.AddReverseComplexRestriction(complex_restr_edge_21_14);
@@ -1686,6 +1688,63 @@ TEST(Astar, test_complex_restriction_short_path_melborne) {
 
   EXPECT_EQ(legs.size(), 1);
   EXPECT_EQ(legs[0].shape(), "psmwfAmlggtG|N}TzAzAzAzAxLhM");
+}
+
+TEST(Astar, test_IsBridgingEdgeRestricted) {
+  auto reader = get_graph_reader(test_dir);
+  Options options;
+  create_costing_options(options);
+  auto costing = vs::CreateAutoCost(Costing::auto_, options);
+  std::vector<sif::BDEdgeLabel> edge_labels;
+  std::vector<sif::BDEdgeLabel> edge_labels_opposite_direction;
+
+  // Lets construct the inputs fed to IsBridgingEdgeRestricted for a situation
+  // where it tries to connect edge 14 to edge_labels from 21 and opposing edges
+  // from 18
+  DirectedEdge edge_21;
+  edge_21.complex_restriction(true);
+  const uint32_t edge_idx_21 = 21;
+  {
+    const auto edge_id = make_graph_id(edge_idx_21);
+    edge_labels.emplace_back(kInvalidLabel, edge_id, &edge_21, vs::Cost{}, 0, 0,
+                             vs::TravelMode::kDrive, false);
+  }
+  // Create our pred for the bridging check
+  DirectedEdge edge_14;
+  edge_14.complex_restriction(true);
+  vs::BDEdgeLabel pred(edge_labels.size() - 1, // Index to predecessor in edge_labels
+                       make_graph_id(14), make_graph_id(16), &edge_14, vs::Cost{}, 0.0, 0.0,
+                       vs::TravelMode::kDrive, vs::Cost{}, false, false);
+
+  DirectedEdge edge_18;
+  edge_18.complex_restriction(true);
+  {
+    // BDEdgeLabel(const uint32_t predecessor,
+    //            const baldr::GraphId& edgeid,
+    //            const baldr::GraphId& oppedgeid,
+    //            const baldr::DirectedEdge* edge,
+    //            const sif::Cost& cost,
+    //            const sif::TravelMode mode,
+    //            const sif::Cost& transition_cost,
+    //            const uint32_t path_distance,
+    //            const bool not_thru_pruning,
+    //            const bool has_time_restrictions)
+    edge_labels_opposite_direction.emplace_back(kInvalidLabel, make_graph_id(18), make_graph_id(22),
+                                                &edge_18, vs::Cost{}, vs::TravelMode::kDrive,
+                                                vs::Cost{}, 0, false, false);
+  }
+  // Create the opp_pred for the bridging check
+  DirectedEdge edge_16;
+  edge_16.complex_restriction(true);
+  vs::BDEdgeLabel opp_pred(edge_labels_opposite_direction.size() -
+                               1, // Index to predecessor in edge_labels_opposite_direction
+                           make_graph_id(16), make_graph_id(14), &edge_16, vs::Cost{}, 0.0, 0.0,
+                           vs::TravelMode::kDrive, vs::Cost{}, false, false);
+
+  const bool is_forward = true;
+
+  ASSERT_TRUE(vt::IsBridgingEdgeRestricted(*reader, is_forward, edge_labels,
+                                           edge_labels_opposite_direction, pred, opp_pred, costing));
 }
 
 class AstarTestEnv : public ::testing::Environment {

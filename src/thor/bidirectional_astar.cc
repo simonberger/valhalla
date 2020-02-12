@@ -486,7 +486,7 @@ inline bool BidirectionalAStar::ExpandReverseInner(GraphReader& graphreader,
 
 // Calculate best path using bi-directional A*. No hierarchies or time
 // dependencies are used. Suitable for pedestrian routes (and bicycle?).
-std::vector<std::vector<PathInfo>>
+std::vector<std::vector<thor::PathInfo>>
 BidirectionalAStar::GetBestPath(valhalla::Location& origin,
                                 valhalla::Location& destination,
                                 GraphReader& graphreader,
@@ -644,97 +644,22 @@ BidirectionalAStar::GetBestPath(valhalla::Location& origin,
   return {}; // If we are here the route failed
 }
 
-// This function checks if the path formed by the two expanding trees
-// when connected by `pred`.
-//
-// To do this, it walks all the complex restrictions on `pred` and
-// for each one, it must traverse both trees to compare actual path
-// with the restriction.
-//
-// If no restriction triggers, it returns true and the edge is allowed
-bool IsBridgingEdgeRestricted(GraphReader& graphreader,
-                              bool is_forward,
-                              std::vector<sif::BDEdgeLabel>& edge_labels,
-                              std::vector<sif::BDEdgeLabel>& edge_labels_opposite_direction,
-                              const BDEdgeLabel& pred,
-                              std::shared_ptr<sif::DynamicCost>& costing) {
-  // For each restriction:
-  //        1) Walk forward/reverse in edgelabels_reverse_/edgelabels_forward_
-  //           to find the end/beginning of the restriction.
-  //        2) Call DynamicCost::Restricted to evaluate if this is allowed
-
-  const auto tile = graphreader.GetGraphTile(pred.edgeid());
-  if (tile == nullptr) {
-    // TODO Now what?
-    LOG_ERROR("Tile pointer was null while checking restrictions");
-    return false;
-  }
-  // Begin by finding the complex restrictions on this bridging edge
-  auto restrictions = tile->GetRestrictions(is_forward, pred.edgeid(), costing->access_mode());
-
-  for (auto cr : restrictions) {
-    // Walk each restriction to its end (when is_forward=true) or
-    // beginning (when is_forward=false) and call DynamicCost::Restricted(...)
-    // to see if it is active for that path
-    auto next_predecessor = [&edge_labels](const EdgeLabel* label) {
-      // Get the next predecessor - make sure it is valid. Continue to get
-      // the next predecessor if the edge is a transition edge.
-      const EdgeLabel* next_pred =
-          (label->predecessor() == baldr::kInvalidLabel) ? label : &edge_labels[label->predecessor()];
-      return next_pred;
-    };
-    bool walked_to_end_current_side = true;
-    const EdgeLabel* next_pred = &pred;
-
-    // Lets walk the restriction and see if the path traverses it
-    cr->WalkVias(
-        [&walked_to_end_current_side, &next_pred, next_predecessor](const baldr::GraphId* via) {
-          if (via->value != next_pred->edgeid().value) {
-            // Pred diverged from restriction, exit early
-            walked_to_end_current_side = false;
-            return baldr::WalkingVia::StopWalking;
-          } else {
-            // Move to the next predecessor and keep walking restriction
-            next_pred = next_predecessor(next_pred);
-            return baldr::WalkingVia::KeepWalking;
-          }
-        });
-
-    if (walked_to_end_current_side) {
-      // We now know that the current side triggers this `cr` (restriction)
-      //
-      // Next we must walk the opposite tree and test that side
-
-      // TODO tweak this to take opposite side into account
-      auto last_pred = next_pred;
-      const GraphTile* tile = graphreader.GetGraphTile(last_pred->edgeid());
-      if (tile == nullptr) {
-        LOG_WARN("Tile was null");
-        return false; // We ran into bad data or logic bug, so allow path to form?
-      }
-      const auto edge = tile->directededge(last_pred->edgeid());
-      // So we now know that the opposite expansion came via this restriction.
-      // Now lets check the entire restriction spanning of both trees of expansion
-      bool is_restricted =
-          costing->Restricted(edge, *last_pred, edge_labels, &edge_labels_opposite_direction, tile,
-                              last_pred->edgeid(), is_forward, 0, 0);
-      return is_restricted;
-    }
-  }
-  // No restrictions, it must be allowed
-  return false;
-}
-
 // The edge on the forward search connects to a reached edge on the reverse
 // search tree. Check if this is the best connection so far and set the
 // search threshold.
 bool BidirectionalAStar::SetForwardConnection(GraphReader& graphreader, const BDEdgeLabel& pred) {
+  // Find pred on opposite side
+  GraphId oppedge = pred.opp_edgeid();
+  EdgeStatusInfo oppedgestatus = edgestatus_reverse_.Get(oppedge);
+  auto opp_pred = edgelabels_reverse_[oppedgestatus.index()];
+
   std::cout << "SetForwardConnection: " << pred.edgeid().id() << ", on_complex_rest "
             << pred.on_complex_rest() << std::endl;
   if (pred.on_complex_rest()) {
     // Lets dig deeper and test if we are really triggering these restrictions
+
     if (IsBridgingEdgeRestricted(graphreader, true, edgelabels_forward_, edgelabels_reverse_, pred,
-                                 costing_)) {
+                                 opp_pred, costing_)) {
       return false;
     }
   }
@@ -742,20 +667,18 @@ bool BidirectionalAStar::SetForwardConnection(GraphReader& graphreader, const BD
   // Get the opposing edge - a candidate shortest path has been found to the
   // end node of this directed edge. Get total cost.
   float c;
-  GraphId oppedge = pred.opp_edgeid();
-  EdgeStatusInfo oppedgestatus = edgestatus_reverse_.Get(oppedge);
   if (pred.predecessor() != kInvalidLabel) {
     // Get the start of the predecessor edge on the forward path. Cost is to
     // the end this edge, plus the cost to the end of the reverse predecessor,
     // plus the transition cost.
-    c = edgelabels_forward_[pred.predecessor()].cost().cost +
-        edgelabels_reverse_[oppedgestatus.index()].cost().cost + pred.transition_cost();
+    c = edgelabels_forward_[pred.predecessor()].cost().cost + opp_pred.cost().cost +
+        pred.transition_cost();
   } else {
     // If no predecessor on the forward path get the predecessor on
     // the reverse path to form the cost.
-    uint32_t predidx = edgelabels_reverse_[oppedgestatus.index()].predecessor();
+    uint32_t predidx = opp_pred.predecessor();
     float oppcost = (predidx == kInvalidLabel) ? 0 : edgelabels_reverse_[predidx].cost().cost;
-    c = pred.cost().cost + oppcost + edgelabels_reverse_[oppedgestatus.index()].transition_cost();
+    c = pred.cost().cost + oppcost + opp_pred.transition_cost();
   }
 
   // Set best_connection if cost is less than the best cost so far.
@@ -783,11 +706,13 @@ bool BidirectionalAStar::SetReverseConnection(GraphReader& graphreader, const BD
   std::cout << "SetReverseConnection: " << pred.edgeid().id() << ", on_complex_rest "
             << pred.on_complex_rest() << std::endl;
   if (pred.on_complex_rest()) {
+    return false;
     // Lets dig deeper and test if we are really triggering these restrictions
-    if (IsBridgingEdgeRestricted(graphreader, false, edgelabels_reverse_, edgelabels_forward_, pred,
-                                 costing_)) {
-      return false;
-    }
+    // if (IsBridgingEdgeRestricted(graphreader, false, edgelabels_reverse_, edgelabels_forward_,
+    // pred,
+    //                             costing_)) {
+    //  return false;
+    //}
   }
 
   // Get the opposing edge - a candidate shortest path has been found to the
@@ -1071,6 +996,132 @@ std::vector<std::vector<PathInfo>> BidirectionalAStar::FormPath(GraphReader& gra
     previous_transition_cost.cost = edgelabel.transition_cost();
   }
   return paths;
+}
+
+bool IsBridgingEdgeRestricted(GraphReader& graphreader,
+                              bool is_forward,
+                              std::vector<sif::BDEdgeLabel>& edge_labels,
+                              std::vector<sif::BDEdgeLabel>& edge_labels_opposite_direction,
+                              const BDEdgeLabel& pred,
+                              const BDEdgeLabel& opp_pred,
+                              std::shared_ptr<sif::DynamicCost>& costing) {
+
+  const uint8_t M = 10;
+  const uint8_t PATCH_PATH_SIZE = M * 2 // Expand M in both directions
+                                  + 1;  // Also need space for pred in the middle
+
+  const auto tile = graphreader.GetGraphTile(pred.edgeid());
+  if (tile == nullptr) {
+    // TODO Now what?
+    LOG_ERROR("Tile pointer was null while checking restrictions");
+    return false;
+  }
+  // Begin by building the "patch" path
+  std::vector<GraphId> patch_path;
+  patch_path.reserve(PATCH_PATH_SIZE);
+
+  // Add pred to patch path
+  patch_path.push_back(pred.edgeid());
+
+  // Track what restriction ids we've seen (via ids + beginning id)
+  std::vector<std::vector<GraphId>> lists_of_restriction_ids;
+  auto next_pred = pred;
+
+  for (int i = 0; i < M; ++i) {
+    std::cout << "  Walking left side" << std::endl;
+    // Walk M edges back and add each to patch path
+    const uint32_t next_pred_idx = next_pred.predecessor();
+    if (next_pred_idx == baldr::kInvalidLabel) {
+      std::cout << "   kInvalidLabel" << std::endl;
+      break;
+    }
+    next_pred = edge_labels[next_pred_idx];
+    std::cout << "   next_pred " << next_pred.edgeid().id() << std::endl;
+    if (!next_pred.on_complex_rest()) {
+      // We can actually stop here if this edge is no longer path of any complex restriction
+      std::cout << "   break due to no complex restr" << std::endl;
+      break;
+    }
+    patch_path.push_back(next_pred.edgeid());
+
+    // Also grab restrictions while walking for later comparison against patch_path
+    //
+    const auto edgeid = next_pred.edgeid();
+    const auto tile = graphreader.GetGraphTile(edgeid);
+    const auto edge = tile->directededge(edgeid);
+    std::cout << "    Checking restrictions edge_id "<<edgeid.id()<<", is_forward "<<is_forward<<", start_restriction() "<<edge->start_restriction()<<", access_mode "<<costing->access_mode()<<std::endl;
+    // If is_forward, check if the edge marks the beginning of a restriction, else check
+    // if the edge marks the end of a complex restriction. (opposite from DynamicCost::Restricted)
+    if ((is_forward && (edge->start_restriction() & costing->access_mode())) ||
+        (!is_forward && (edge->end_restriction() & costing->access_mode()))) {
+      auto restrictions = tile->GetRestrictions(is_forward, edgeid, costing->access_mode());
+      if (restrictions.size() == 0) {
+        LOG_WARN("Found no restrictions in tile even though edge-label.on_complex_rest() == true");
+        // We can actually stop here if this edge is no longer path of any complex restriction
+        break;
+      }
+      std::cout << "   checking restrictions " << std::endl;
+      for (auto cr : restrictions) {
+        // For each restriction `cr`, grab the beginning (or end) id PLUS vias
+        std::vector<GraphId> restriction_ids;
+        // We must add current edge as well, not just the vias to track the full
+        // restriction
+        restriction_ids.push_back(edgeid);
+        cr->WalkVias([&restriction_ids](const GraphId* id) {
+          restriction_ids.push_back(*id);
+          return WalkingVia::KeepWalking;
+        });
+        if (restriction_ids.size() > 0) {
+          lists_of_restriction_ids.push_back(restriction_ids);
+        }
+      }
+    }
+  }
+
+  std::cout << "Reversing patch_path" << std::endl;
+  // Reverse patch_path so that the leftmost edge is first and original `pred`
+  // at the end before pushing the right edges onto the back
+  std::reverse(patch_path.begin(), patch_path.end());
+
+  auto next_opp_pred = opp_pred;
+  // Now push_back the edges from opposite direction onto our patch_path
+  for (int n = 0; n < PATCH_PATH_SIZE; ++n) {
+    std::cout << "  Walking opposite side: next_opp_pred.predecessor() "
+              << next_opp_pred.predecessor() << std::endl;
+    auto next_opp_pred_idx = next_opp_pred.predecessor();
+    if (next_opp_pred_idx == kInvalidLabel) {
+      std::cout << "    break kInvalidLabel" << std::endl;
+      // We reached the end of the opposing tree, i.e. destination or origin
+      break;
+    }
+    next_opp_pred = edge_labels_opposite_direction[next_opp_pred_idx];
+    // We need the opposing edge graph-id as the rest of the patch_path consists of
+    // edges pointing to the right
+    // TODO Double check if we need the opposing edge id
+    //auto edgeid = next_opp_pred.opp_edgeid();
+    auto edgeid = next_opp_pred.edgeid();
+    std::cout << "   next_opp_pred " << next_opp_pred.edgeid().id() << " edgeid " << edgeid
+              << std::endl;
+    patch_path.push_back(edgeid);
+  }
+
+  // We now have our patch_path and we know the ids of the complex restrictions
+  // that began on this side (left side) of original pred.
+  // We can now check if any of the restrictions have a match against any subpath
+  // in our patch_path
+
+  std::cout << "patch_path" << std::endl;
+  for (auto id : patch_path) {
+    std::cout << "  " << id.id() << std::endl;
+  }
+  std::cout << "lists_of_restriction_ids" << std::endl;
+  for (auto list : lists_of_restriction_ids) {
+    for (auto id : list) {
+      std::cout << "  " << id.id() << std::endl;
+    }
+  }
+
+  return CheckPatchPathForRestrictions(patch_path, lists_of_restriction_ids);
 }
 
 } // namespace thor
