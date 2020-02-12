@@ -1621,7 +1621,7 @@ TEST(Astar, test_complex_restriction_short_path_melborne) {
   const auto& directions = response.directions().routes(0).legs();
 
   EXPECT_EQ(legs.size(), 1);
-  EXPECT_EQ(legs[0].shape(), "psmwfAmlggtG|N}TzAzAzAzAxLhM");
+  EXPECT_EQ(legs.at(0).shape(), "psmwfAmlggtG|N}TzAzAzAzAxLhM");
 }
 
 TEST(Astar, test_IsBridgingEdgeRestricted) {
