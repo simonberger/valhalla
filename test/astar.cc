@@ -1532,74 +1532,6 @@ TEST(Astar, test_timed_conditional_restriction_3) {
   EXPECT_FALSE(found_route) << "Found a route when no route was expected";
 }
 
-enum class StrangleDirection {
-  StrangleForward,
-  StrangleReverse,
-};
-
-// Subclassing BidirectionalAStar to be able to decide on strangling forward
-// or reverse direction
-class BidirectionalAStarSingleDirection : public vt::BidirectionalAStar {
-
-  StrangleDirection strangled_;
-  uint32_t num_fwd_expanded_;
-  uint32_t num_rev_expanded_;
-
-public:
-  BidirectionalAStarSingleDirection(StrangleDirection strangled) {
-    strangled_ = strangled;
-    // BidirectionalAStar::BidirectionalAStar();
-  }
-
-  // Reimplement ExpandForward to not do anything
-  bool ExpandForward(baldr::GraphReader& graphreader,
-                     const baldr::GraphId& node,
-                     sif::BDEdgeLabel& pred,
-                     const uint32_t pred_idx,
-                     const bool from_transition) {
-    if (strangled_ == StrangleDirection::StrangleForward && num_fwd_expanded_ > 0) {
-      std::cout << "MOOOOOOCK ExpandForward" << std::endl;
-      return false;
-    }
-    num_fwd_expanded_ += 1;
-    std::cout << "REAL ExpandForward " << pred.edgeid().id() << std::endl;
-    return vt::BidirectionalAStar::ExpandForward(graphreader, node, pred, pred_idx, from_transition);
-  }
-  bool SetForwardConnection(baldr::GraphReader& graphreader, const sif::BDEdgeLabel& pred) {
-    if (strangled_ == StrangleDirection::StrangleForward) {
-      std::cout << "MOOOOOOCK SetForwardConnection" << std::endl;
-      return false;
-    }
-    std::cout << "REAL SetForwardConnection" << std::endl;
-    return vt::BidirectionalAStar::SetForwardConnection(graphreader, pred);
-  }
-
-  // Reimplement ExpandReverse to not do anything
-  bool ExpandReverse(baldr::GraphReader& graphreader,
-                     const baldr::GraphId& node,
-                     sif::BDEdgeLabel& pred,
-                     const uint32_t pred_idx,
-                     const baldr::DirectedEdge* opp_pred_edge,
-                     const bool from_transition) {
-    if (strangled_ == StrangleDirection::StrangleReverse && num_rev_expanded_ > 0) {
-      std::cout << "MOOOOOOCK ExpandReverse" << std::endl;
-      return false;
-    }
-    num_rev_expanded_ += 1;
-    std::cout << "REAL ExpandReverse " << pred.edgeid().id() << std::endl;
-    return vt::BidirectionalAStar::ExpandReverse(graphreader, node, pred, pred_idx, opp_pred_edge,
-                                                 from_transition);
-  }
-  bool SetReverseConnection(baldr::GraphReader& graphreader, const sif::BDEdgeLabel& pred) {
-    if (strangled_ == StrangleDirection::StrangleReverse) {
-      std::cout << "MOOOOOOCK SetReverseConnection" << std::endl;
-      return false;
-    }
-    std::cout << "REAL SetReverseConnection" << std::endl;
-    return vt::BidirectionalAStar::SetReverseConnection(graphreader, pred);
-  }
-};
-
 TEST(Astar, test_complex_restriction_short_path_fake) {
   // Tests that Bidirectional can correctly connect the two expanding trees
   // when the connecting edge is part of a complex restriction
@@ -1613,14 +1545,6 @@ TEST(Astar, test_complex_restriction_short_path_fake) {
   costs[int(mode)] = vs::CreateAutoCost(Costing::auto_, options);
   ASSERT_TRUE(bool(costs[int(mode)]));
 
-  //// Test Bidirectional both for forward and reverse expansion
-  // std::vector<std::pair<BidirectionalAStarSingleDirection, std::string>> astars;
-  // astars.push_back(
-  //    std::make_pair(BidirectionalAStarSingleDirection(StrangleDirection::StrangleForward),
-  //                   "WithoutForwardExpansion"));
-  // astars.push_back(
-  //    std::make_pair(BidirectionalAStarSingleDirection(StrangleDirection::StrangleReverse),
-  //                   "WithoutReverseExpansion"));
   // Test Bidirectional both for forward and reverse expansion
   std::vector<std::pair<vt::BidirectionalAStar, std::string>> astars;
   astars.push_back(std::make_pair(vt::BidirectionalAStar(), "BidirectionalAStar"));
@@ -1629,7 +1553,7 @@ TEST(Astar, test_complex_restriction_short_path_fake) {
   //                   "WithoutReverseExpansion"));
   for (auto& astar : astars) {
     std::cout << "new test" << std::endl;
-    // TODO Add two tests where start and end lives on a partial complex restriction
+    // Two tests where start and end lives on a partial complex restriction
     //      Under this circumstance the restriction should _not_ trigger
 
     // Put the origin on K which is start of restriction
@@ -1701,6 +1625,9 @@ TEST(Astar, test_complex_restriction_short_path_melborne) {
 }
 
 TEST(Astar, test_IsBridgingEdgeRestricted) {
+  // Tests the IsBridgingEdgeRestricted function specifically with known inputs
+  // which is simpler than trying to get BidirectionalAStar to call it with
+  // a specific setup
   auto reader = get_graph_reader(test_dir);
   Options options;
   create_costing_options(options);
@@ -1729,16 +1656,6 @@ TEST(Astar, test_IsBridgingEdgeRestricted) {
   DirectedEdge edge_18;
   edge_18.complex_restriction(true);
   {
-    // BDEdgeLabel(const uint32_t predecessor,
-    //            const baldr::GraphId& edgeid,
-    //            const baldr::GraphId& oppedgeid,
-    //            const baldr::DirectedEdge* edge,
-    //            const sif::Cost& cost,
-    //            const sif::TravelMode mode,
-    //            const sif::Cost& transition_cost,
-    //            const uint32_t path_distance,
-    //            const bool not_thru_pruning,
-    //            const bool has_time_restrictions)
     edge_labels_opposite_direction.emplace_back(kInvalidLabel, make_graph_id(18), make_graph_id(22),
                                                 &edge_18, vs::Cost{}, vs::TravelMode::kDrive,
                                                 vs::Cost{}, 0, false, false);
