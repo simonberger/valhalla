@@ -250,17 +250,13 @@ void make_tile() {
     tile.directededges().back().complex_restriction(true);
     ComplexRestrictionBuilder complex_restr_edge_21_14;
     complex_restr_edge_21_14.set_type(RestrictionType::kNoEntry);
-    // TODO I switched set_to with set_from after looking at
-    // implementation of GraphTile::GetRestrictions but it sounds backwards to me...
-    complex_restr_edge_21_14.set_to_id(make_graph_id(21));
-    complex_restr_edge_21_14.set_from_id(make_graph_id(18));
+    complex_restr_edge_21_14.set_to_id(make_graph_id(18));
+    complex_restr_edge_21_14.set_from_id(make_graph_id(21));
     std::vector<GraphId> vias;
     vias.push_back(make_graph_id(14));
-    vias.push_back(make_graph_id(18));
     complex_restr_edge_21_14.set_via_list(vias);
     complex_restr_edge_21_14.set_modes(kAllAccess);
-    tile.AddReverseComplexRestriction(complex_restr_edge_21_14);
-    // Make forward separate builder
+    //tile.AddReverseComplexRestriction(complex_restr_edge_21_14);
     tile.AddForwardComplexRestriction(complex_restr_edge_21_14);
   }
   add_node(node::k, 1);
@@ -274,18 +270,14 @@ void make_tile() {
     tile.directededges().back().complex_restriction(true);
     ComplexRestrictionBuilder complex_restr_edge_22_16_15;
     complex_restr_edge_22_16_15.set_type(RestrictionType::kNoEntry);
-    // TODO I switched set_to with set_from after looking at
-    // implementation of GraphTile::GetRestrictions but it sounds backwards to me...
-    complex_restr_edge_22_16_15.set_to_id(make_graph_id(22));
-    complex_restr_edge_22_16_15.set_from_id(make_graph_id(15));
+    complex_restr_edge_22_16_15.set_to_id(make_graph_id(15));
+    complex_restr_edge_22_16_15.set_from_id(make_graph_id(22));
     std::vector<GraphId> vias;
     vias.push_back(make_graph_id(16));
-    vias.push_back(make_graph_id(15));
     complex_restr_edge_22_16_15.set_via_list(vias);
     complex_restr_edge_22_16_15.set_modes(kAllAccess);
     tile.AddReverseComplexRestriction(complex_restr_edge_22_16_15);
-    // Make reverse separate builder
-    tile.AddForwardComplexRestriction(complex_restr_edge_22_16_15);
+    //tile.AddForwardComplexRestriction(complex_restr_edge_22_16_15);
   }
 
   add_edge(node::l, node::m, 23, 0, true);
