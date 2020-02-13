@@ -217,21 +217,27 @@ void make_tile() {
   // Third set of roads - Complex restriction with detour
   add_edge(node::h, node::i, 14, 0, true);
   {
+    // we only set this to true for vias
     tile.directededges().back().complex_restriction(true);
   }
   add_edge(node::h, node::k, 15, 0, true);
   {
+    // when we are an end of a restriction we set the modes that
+    // this restriction applies to.
     tile.directededges().back().set_end_restriction(kAllAccess);
   }
   add_node(node::h, 2);
 
   add_edge(node::i, node::h, 16, 0, false);
   {
+    // we only set this to true for vias
     tile.directededges().back().complex_restriction(true);
   }
   add_edge(node::i, node::j, 17, 0, true);
   add_edge(node::i, node::l, 18, 0, true);
   {
+    // when we are an end of a restriction we set the modes that
+    // this restriction applies to.
     tile.directededges().back().set_end_restriction(kAllAccess);
   }
   add_node(node::i, 3);
@@ -243,11 +249,11 @@ void make_tile() {
   add_edge(node::k, node::h, 21, 1, false);
   {
     // Add first part of complex turn restriction CLOCKWISE direction
-    // preventing turn from 21 -> 14
+    // preventing turn from 21 -> 14 -> 18
     //
-    // Greg - Remove all other complex restriction builders but this one
+    // when we are the start of a restriction we set the modes that
+    // this restriction applies to.
     tile.directededges().back().set_start_restriction(kAllAccess);
-    tile.directededges().back().complex_restriction(true);
     ComplexRestrictionBuilder complex_restr_edge_21_14;
     complex_restr_edge_21_14.set_type(RestrictionType::kNoEntry);
     complex_restr_edge_21_14.set_to_id(make_graph_id(18));
@@ -256,8 +262,7 @@ void make_tile() {
     vias.push_back(make_graph_id(14));
     complex_restr_edge_21_14.set_via_list(vias);
     complex_restr_edge_21_14.set_modes(kAllAccess);
-    //tile.AddReverseComplexRestriction(complex_restr_edge_21_14);
-    tile.AddForwardComplexRestriction(complex_restr_edge_21_14);
+    tile.AddReverseComplexRestriction(complex_restr_edge_21_14);
   }
   add_node(node::k, 1);
 
@@ -266,8 +271,9 @@ void make_tile() {
     // Add complex turn restriction COUNTER CLOCKWISE direction
     // preventing turn from 22 -> 16 -> 15
     //
+    // when we are the start of a restriction we set the modes that
+    // this restriction applies to.
     tile.directededges().back().set_start_restriction(kAllAccess);
-    tile.directededges().back().complex_restriction(true);
     ComplexRestrictionBuilder complex_restr_edge_22_16_15;
     complex_restr_edge_22_16_15.set_type(RestrictionType::kNoEntry);
     complex_restr_edge_22_16_15.set_to_id(make_graph_id(15));
@@ -276,8 +282,7 @@ void make_tile() {
     vias.push_back(make_graph_id(16));
     complex_restr_edge_22_16_15.set_via_list(vias);
     complex_restr_edge_22_16_15.set_modes(kAllAccess);
-    tile.AddReverseComplexRestriction(complex_restr_edge_22_16_15);
-    //tile.AddForwardComplexRestriction(complex_restr_edge_22_16_15);
+    tile.AddForwardComplexRestriction(complex_restr_edge_22_16_15);
   }
 
   add_edge(node::l, node::m, 23, 0, true);
