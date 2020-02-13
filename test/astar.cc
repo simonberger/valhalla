@@ -222,9 +222,23 @@ void make_tile() {
   }
   add_edge(node::h, node::k, 15, 0, true);
   {
+    // preventing turn from 22 -> 16 -> 15  in the reverse direction
+    // in regards to bi-directional.  Forget about is the edge is
+    // oneway or not
+    //
     // when we are an end of a restriction we set the modes that
     // this restriction applies to.
     tile.directededges().back().set_end_restriction(kAllAccess);
+    ComplexRestrictionBuilder complex_restr_edge_22_16_15;
+    complex_restr_edge_22_16_15.set_type(RestrictionType::kNoEntry);
+    complex_restr_edge_22_16_15.set_to_id(make_graph_id(22));
+    complex_restr_edge_22_16_15.set_from_id(make_graph_id(15));
+    std::vector<GraphId> vias;
+    vias.push_back(make_graph_id(16));
+    complex_restr_edge_22_16_15.set_via_list(vias);
+    complex_restr_edge_22_16_15.set_modes(kAllAccess);
+    tile.AddReverseComplexRestriction(complex_restr_edge_22_16_15);
+
   }
   add_node(node::h, 2);
 
@@ -236,9 +250,23 @@ void make_tile() {
   add_edge(node::i, node::j, 17, 0, true);
   add_edge(node::i, node::l, 18, 0, true);
   {
-    // when we are an end of a restriction we set the modes that
+    // preventing turn from 21 -> 14 -> 18 in the reverse direction
+    // in regards to bi-directional.  Forget about is the edge is
+    // oneway or not
+    //
+    // when we are the end of a restriction we set the modes that
     // this restriction applies to.
     tile.directededges().back().set_end_restriction(kAllAccess);
+    ComplexRestrictionBuilder complex_restr_edge_21_14;
+    complex_restr_edge_21_14.set_type(RestrictionType::kNoEntry);
+    complex_restr_edge_21_14.set_to_id(make_graph_id(21));
+    complex_restr_edge_21_14.set_from_id(make_graph_id(18));
+    std::vector<GraphId> vias;
+    vias.push_back(make_graph_id(14));
+    complex_restr_edge_21_14.set_via_list(vias);
+    complex_restr_edge_21_14.set_modes(kAllAccess);
+    tile.AddReverseComplexRestriction(complex_restr_edge_21_14);
+
   }
   add_node(node::i, 3);
 
@@ -262,7 +290,7 @@ void make_tile() {
     vias.push_back(make_graph_id(14));
     complex_restr_edge_21_14.set_via_list(vias);
     complex_restr_edge_21_14.set_modes(kAllAccess);
-    tile.AddReverseComplexRestriction(complex_restr_edge_21_14);
+    tile.AddForwardComplexRestriction(complex_restr_edge_21_14);
   }
   add_node(node::k, 1);
 
