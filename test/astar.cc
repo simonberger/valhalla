@@ -217,50 +217,22 @@ void make_tile() {
   // Third set of roads - Complex restriction with detour
   add_edge(node::h, node::i, 14, 0, true);
   {
-    // Add second part of complex turn restriction CLOCKWISE direction
-    // preventing turn from 14 -> 18
     tile.directededges().back().complex_restriction(true);
-    ComplexRestrictionBuilder complex_restr_edge_14_18;
-    // TODO I switched set_to with set_from after looking at
-    // implementation of GraphTile::GetRestrictions but it sounds backwards to me...
-    complex_restr_edge_14_18.set_to_id(make_graph_id(14));
-    complex_restr_edge_14_18.set_from_id(make_graph_id(18));
-    complex_restr_edge_14_18.set_modes(kAllAccess);
-    std::vector<GraphId> vias;
-    vias.push_back(make_graph_id(14));
-    vias.push_back(make_graph_id(21));
-    complex_restr_edge_14_18.set_via_list(vias);
-    tile.AddForwardComplexRestriction(complex_restr_edge_14_18);
-    tile.AddReverseComplexRestriction(complex_restr_edge_14_18);
   }
   add_edge(node::h, node::k, 15, 0, true);
   {
-    // Add first part of complex turn restriction COUNTER-CLOCKWISE direction
-    // preventing turn from 16 -> 15
-    tile.directededges().back().set_start_restriction(kAutoAccess);
-    tile.directededges().back().complex_restriction(true);
-    ComplexRestrictionBuilder complex_restr_edge_16_15;
-    complex_restr_edge_16_15.set_from_id(make_graph_id(16));
-    complex_restr_edge_16_15.set_to_id(make_graph_id(15));
-    complex_restr_edge_16_15.set_modes(kAllAccess);
-    tile.AddForwardComplexRestriction(complex_restr_edge_16_15);
-    tile.AddReverseComplexRestriction(complex_restr_edge_16_15);
+    tile.directededges().back().set_end_restriction(kAllAccess);
   }
   add_node(node::h, 2);
 
   add_edge(node::i, node::h, 16, 0, false);
+  {
+    tile.directededges().back().complex_restriction(true);
+  }
   add_edge(node::i, node::j, 17, 0, true);
   add_edge(node::i, node::l, 18, 0, true);
   {
-    // Add second part of complex turn restriction CLOCKWISE direction
-    // preventing turn from 14 -> 18
-    tile.directededges().back().set_end_restriction(kAutoAccess);
-    ComplexRestrictionBuilder complex_restr_edge_14_18;
-    complex_restr_edge_14_18.set_from_id(make_graph_id(14));
-    complex_restr_edge_14_18.set_to_id(make_graph_id(18));
-    complex_restr_edge_14_18.set_modes(kAllAccess);
-    tile.AddForwardComplexRestriction(complex_restr_edge_14_18);
-    tile.AddReverseComplexRestriction(complex_restr_edge_14_18);
+    tile.directededges().back().set_end_restriction(kAllAccess);
   }
   add_node(node::i, 3);
 
@@ -272,36 +244,50 @@ void make_tile() {
   {
     // Add first part of complex turn restriction CLOCKWISE direction
     // preventing turn from 21 -> 14
+    //
+    // Greg - Remove all other complex restriction builders but this one
     tile.directededges().back().set_start_restriction(kAllAccess);
     tile.directededges().back().complex_restriction(true);
     ComplexRestrictionBuilder complex_restr_edge_21_14;
+    complex_restr_edge_21_14.set_type(RestrictionType::kNoEntry);
     // TODO I switched set_to with set_from after looking at
     // implementation of GraphTile::GetRestrictions but it sounds backwards to me...
     complex_restr_edge_21_14.set_to_id(make_graph_id(21));
-    complex_restr_edge_21_14.set_from_id(make_graph_id(14));
+    complex_restr_edge_21_14.set_from_id(make_graph_id(18));
     std::vector<GraphId> vias;
     vias.push_back(make_graph_id(14));
     vias.push_back(make_graph_id(18));
     complex_restr_edge_21_14.set_via_list(vias);
     complex_restr_edge_21_14.set_modes(kAllAccess);
-    tile.AddForwardComplexRestriction(complex_restr_edge_21_14);
     tile.AddReverseComplexRestriction(complex_restr_edge_21_14);
+    // Make forward separate builder
+    tile.AddForwardComplexRestriction(complex_restr_edge_21_14);
   }
   add_node(node::k, 1);
 
   add_edge(node::l, node::i, 22, 2, false);
   {
-    // Add second part of complex turn restriction COUNTER-CLOCKWISE direction
-    // preventing turn from 22 -> 16
-    tile.directededges().back().set_start_restriction(kAutoAccess);
+    // Add complex turn restriction COUNTER CLOCKWISE direction
+    // preventing turn from 22 -> 16 -> 15
+    //
+    tile.directededges().back().set_start_restriction(kAllAccess);
     tile.directededges().back().complex_restriction(true);
-    ComplexRestrictionBuilder complex_restr_edge_22_16;
-    complex_restr_edge_22_16.set_from_id(make_graph_id(22));
-    complex_restr_edge_22_16.set_to_id(make_graph_id(16));
-    complex_restr_edge_22_16.set_modes(kAllAccess);
-    tile.AddForwardComplexRestriction(complex_restr_edge_22_16);
-    tile.AddReverseComplexRestriction(complex_restr_edge_22_16);
+    ComplexRestrictionBuilder complex_restr_edge_22_16_15;
+    complex_restr_edge_22_16_15.set_type(RestrictionType::kNoEntry);
+    // TODO I switched set_to with set_from after looking at
+    // implementation of GraphTile::GetRestrictions but it sounds backwards to me...
+    complex_restr_edge_22_16_15.set_to_id(make_graph_id(22));
+    complex_restr_edge_22_16_15.set_from_id(make_graph_id(15));
+    std::vector<GraphId> vias;
+    vias.push_back(make_graph_id(16));
+    vias.push_back(make_graph_id(15));
+    complex_restr_edge_22_16_15.set_via_list(vias);
+    complex_restr_edge_22_16_15.set_modes(kAllAccess);
+    tile.AddReverseComplexRestriction(complex_restr_edge_22_16_15);
+    // Make reverse separate builder
+    tile.AddForwardComplexRestriction(complex_restr_edge_22_16_15);
   }
+
   add_edge(node::l, node::m, 23, 0, true);
   add_node(node::l, 2);
 
@@ -1608,77 +1594,137 @@ TEST(Astar, test_complex_restriction_short_path_fake) {
   }
 }
 
-TEST(Astar, test_complex_restriction_short_path_melborne) {
-  // Tests a real live scenario of a short Bidirectional query against "Melborne"
-  auto conf = get_conf("melborne_tiles");
-  route_tester tester(conf);
-  std::string request =
-      R"({"locations":[{"lat":-37.625167699300704,"lon":145.36315056293708},{"lat":-37.6257286993007,"lon":145.36319656293708}],"costing":"auto"})";
+//TEST(Astar, test_complex_restriction_short_path_melborne) {
+//  // Tests a real live scenario of a short Bidirectional query against "Melborne"
+//  auto conf = get_conf("melborne_tiles");
+//  route_tester tester(conf);
+//  std::string request =
+//      R"({"locations":[{"lat":-37.625167699300704,"lon":145.36315056293708},{"lat":-37.6257286993007,"lon":145.36319656293708}],"costing":"auto"})";
 
-  auto response = tester.test(request);
+//  auto response = tester.test(request);
 
-  const auto& leg = response.trip().routes(0).legs(0);
-  const auto& directions = response.directions().routes(0).legs();
+//  const auto& leg = response.trip().routes(0).legs(0);
+//  const auto& directions = response.directions().routes(0).legs();
 
-  // EXPECT_EQ(legs.size(), 1);
-  EXPECT_EQ(leg.shape(), "psmwfAmlggtG|N}TzAzAzAzAxLhM");
-}
+//  // EXPECT_EQ(legs.size(), 1);
+//  EXPECT_EQ(leg.shape(), "psmwfAmlggtG|N}TzAzAzAzAxLhM");
+//}
 
-TEST(Astar, test_IsBridgingEdgeRestricted) {
-  // Tests the IsBridgingEdgeRestricted function specifically with known inputs
-  // which is simpler than trying to get BidirectionalAStar to call it with
-  // a specific setup
-  auto reader = get_graph_reader(test_dir);
-  Options options;
-  create_costing_options(options);
-  auto costing = vs::CreateAutoCost(Costing::auto_, options);
-  std::vector<sif::BDEdgeLabel> edge_labels;
-  std::vector<sif::BDEdgeLabel> edge_labels_opposite_direction;
+//TEST(Astar, test_IsBridgingEdgeRestricted) {
+//  // Tests the IsBridgingEdgeRestricted function specifically with known inputs
+//  // which is simpler than trying to get BidirectionalAStar to call it with
+//  // a specific setup
+//  auto reader = get_graph_reader(test_dir);
+//  Options options;
+//  create_costing_options(options);
+//  auto costing = vs::CreateAutoCost(Costing::auto_, options);
+//  std::vector<sif::BDEdgeLabel> edge_labels;
+//  std::vector<sif::BDEdgeLabel> edge_labels_opposite_direction;
 
-  // Lets construct the inputs fed to IsBridgingEdgeRestricted for a situation
-  // where it tries to connect edge 14 to edge_labels from 21 and opposing edges
-  // from 18
-  DirectedEdge edge_21;
-  edge_21.complex_restriction(true);
-  const uint32_t edge_idx_21 = 21;
-  {
-    const auto edge_id = make_graph_id(edge_idx_21);
-    edge_labels.emplace_back(kInvalidLabel, edge_id, &edge_21, vs::Cost{}, 0, 0,
-                             vs::TravelMode::kDrive, false);
+//  // Lets construct the inputs fed to IsBridgingEdgeRestricted for a situation
+//  // where it tries to connect edge 14 to edge_labels from 21 and opposing edges
+//  // from 18
+//  DirectedEdge edge_21;
+//  edge_21.complex_restriction(true);
+//  const uint32_t edge_idx_21 = 21;
+//  {
+//    const auto edge_id = make_graph_id(edge_idx_21);
+//    edge_labels.emplace_back(kInvalidLabel, edge_id, &edge_21, vs::Cost{}, 0, 0,
+//                             vs::TravelMode::kDrive, false);
+//  }
+//  // Create our pred for the bridging check
+//  DirectedEdge edge_14;
+//  edge_14.complex_restriction(true);
+//  vs::BDEdgeLabel pred(edge_labels.size() - 1, // Index to predecessor in edge_labels
+//                       make_graph_id(14), make_graph_id(16), &edge_14, vs::Cost{}, 0.0, 0.0,
+//                       vs::TravelMode::kDrive, vs::Cost{}, false, false);
+
+//  DirectedEdge edge_18;
+//  edge_18.complex_restriction(true);
+//  {
+//    edge_labels_opposite_direction.emplace_back(kInvalidLabel, make_graph_id(18), make_graph_id(22),
+//                                                &edge_18, vs::Cost{}, vs::TravelMode::kDrive,
+//                                                vs::Cost{}, 0, false, false);
+//  }
+//  // Create the opp_pred for the bridging check
+//  DirectedEdge edge_16;
+//  edge_16.complex_restriction(true);
+//  vs::BDEdgeLabel opp_pred(edge_labels_opposite_direction.size() -
+//                               1, // Index to predecessor in edge_labels_opposite_direction
+//                           make_graph_id(16), make_graph_id(14), &edge_16, vs::Cost{}, 0.0, 0.0,
+//                           vs::TravelMode::kDrive, vs::Cost{}, false, false);
+
+//  {
+//    const bool is_forward = true;
+//    ASSERT_TRUE(vt::IsBridgingEdgeRestricted(*reader, is_forward, edge_labels,
+//                                             edge_labels_opposite_direction, pred, opp_pred,
+//                                             costing));
+//  }
+//  LOG_INFO("Next, switch to verify reverse expansion");
+//  {
+//    const bool is_forward = false;
+//    ASSERT_TRUE(vt::IsBridgingEdgeRestricted(*reader, is_forward, edge_labels_opposite_direction,
+//                                             edge_labels, opp_pred, pred, costing));
+//=======
+TEST(ComplexRestriction, CheckPatchPathForRestrictions) {
+  std::vector<GraphId> patch_path;
+  const int length_patch_path = 10;
+  for (uint32_t id = 0; id < length_patch_path; ++id) {
+    patch_path.push_back(GraphId(0, 0, id));
   }
-  // Create our pred for the bridging check
-  DirectedEdge edge_14;
-  edge_14.complex_restriction(true);
-  vs::BDEdgeLabel pred(edge_labels.size() - 1, // Index to predecessor in edge_labels
-                       make_graph_id(14), make_graph_id(16), &edge_14, vs::Cost{}, 0.0, 0.0,
-                       vs::TravelMode::kDrive, vs::Cost{}, false, false);
-
-  DirectedEdge edge_18;
-  edge_18.complex_restriction(true);
-  {
-    edge_labels_opposite_direction.emplace_back(kInvalidLabel, make_graph_id(18), make_graph_id(22),
-                                                &edge_18, vs::Cost{}, vs::TravelMode::kDrive,
-                                                vs::Cost{}, 0, false, false);
-  }
-  // Create the opp_pred for the bridging check
-  DirectedEdge edge_16;
-  edge_16.complex_restriction(true);
-  vs::BDEdgeLabel opp_pred(edge_labels_opposite_direction.size() -
-                               1, // Index to predecessor in edge_labels_opposite_direction
-                           make_graph_id(16), make_graph_id(14), &edge_16, vs::Cost{}, 0.0, 0.0,
-                           vs::TravelMode::kDrive, vs::Cost{}, false, false);
 
   {
-    const bool is_forward = true;
-    ASSERT_TRUE(vt::IsBridgingEdgeRestricted(*reader, is_forward, edge_labels,
-                                             edge_labels_opposite_direction, pred, opp_pred,
-                                             costing));
+    std::vector<std::vector<GraphId>> list_of_restrictions;
+    {
+      // Test with restriction out of order
+      std::vector<GraphId> restr;
+      restr.push_back(GraphId(0, 0, 2));
+      restr.push_back(GraphId(0, 0, 3));
+      restr.push_back(GraphId(0, 0, 1)); // Out of order, should mean no match
+      list_of_restrictions.push_back(restr);
+    }
+    EXPECT_FALSE(CheckPatchPathForRestrictions(patch_path, list_of_restrictions));
+    {
+      // Test a positive, a matching restriction
+      std::vector<GraphId> restr;
+      restr.push_back(GraphId(0, 0, 2));
+      restr.push_back(GraphId(0, 0, 3));
+      restr.push_back(GraphId(0, 0, 4)); // Out of order, should mean no match
+      list_of_restrictions.push_back(restr);
+    }
+    EXPECT_TRUE(CheckPatchPathForRestrictions(patch_path, list_of_restrictions));
   }
-  LOG_INFO("Next, switch to verify reverse expansion");
   {
-    const bool is_forward = false;
-    ASSERT_TRUE(vt::IsBridgingEdgeRestricted(*reader, is_forward, edge_labels_opposite_direction,
-                                             edge_labels, opp_pred, pred, costing));
+    std::vector<std::vector<GraphId>> list_of_restrictions;
+
+    {
+      // Test a restriction that goes outside the patch_path
+      std::vector<GraphId> restr;
+      for (uint32_t id = length_patch_path - 2; id < length_patch_path + 2; ++id) {
+        restr.push_back(GraphId(0, 0, id));
+      }
+      list_of_restrictions.push_back(restr);
+    }
+    EXPECT_FALSE(CheckPatchPathForRestrictions(patch_path, list_of_restrictions));
+    {
+      // Test a restriction overlaying beginning
+      std::vector<GraphId> restr;
+      restr.push_back(GraphId(0, 0, 20));
+      restr.push_back(GraphId(0, 0, 0));
+      restr.push_back(GraphId(0, 0, 1));
+      list_of_restrictions.push_back(restr);
+    }
+    EXPECT_FALSE(CheckPatchPathForRestrictions(patch_path, list_of_restrictions));
+  }
+  {
+    std::vector<std::vector<GraphId>> list_of_restrictions;
+    {
+      // Test single edge restriction
+      std::vector<GraphId> restr;
+      restr.push_back(GraphId(0, 0, 2));
+      list_of_restrictions.push_back(restr);
+    }
+    EXPECT_TRUE(CheckPatchPathForRestrictions(patch_path, list_of_restrictions));
   }
 }
 
