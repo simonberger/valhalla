@@ -178,76 +178,77 @@ void write_config(const std::string& filename,
 
 void make_tile() {
 
-  // Build the maps from the ASCII diagrams, and extract the generated lon,lat values
-  auto nodemap1 = valhalla::test::mapgen::map_to_coordinates(map1, 100, {0, 0});
-  const int initial_osm_id_1 = 0;
-  valhalla::test::mapgen::build_pbf(nodemap1, ways1, {}, {}, "map1.pbf", 0);
-  node::a.second = {nodemap1["a"].lon, nodemap1["a"].lat};
-  node::b.second = {nodemap1["b"].lon, nodemap1["b"].lat};
-  node::c.second = {nodemap1["c"].lon, nodemap1["c"].lat};
-  node::d.second = {nodemap1["d"].lon, nodemap1["d"].lat};
+  {
+    // Build the maps from the ASCII diagrams, and extract the generated lon,lat values
+    auto nodemap = valhalla::test::mapgen::map_to_coordinates(map1, 100, {0, 0});
+    const int initial_osm_id = 0;
+    valhalla::test::mapgen::build_pbf(nodemap, ways1, {}, {}, "map1.pbf", initial_osm_id);
+    node::a.second = {nodemap["a"].lon, nodemap["a"].lat};
+    node::b.second = {nodemap["b"].lon, nodemap["b"].lat};
+    node::c.second = {nodemap["c"].lon, nodemap["c"].lat};
+    node::d.second = {nodemap["d"].lon, nodemap["d"].lat};
+  }
 
-  auto nodemap2 = valhalla::test::mapgen::map_to_coordinates(map2, 100, {0.2, 0.0});
-  const int initial_osm_id_2 = 100; // Need to start on a custom OSM ID because these maps will be
-                                    // merged into a single Valhalla map.  We don't want
-                                    // ID overlaps to cause things to get joined in the graph.
-  valhalla::test::mapgen::build_pbf(nodemap2, ways2, {}, {}, "map2.pbf", initial_osm_id_2);
-  node::e.second = {nodemap2["e"].lon, nodemap2["e"].lat};
-  node::f.second = {nodemap2["f"].lon, nodemap2["f"].lat};
-  node::g.second = {nodemap2["g"].lon, nodemap2["g"].lat};
+  {
+    auto nodemap = valhalla::test::mapgen::map_to_coordinates(map2, 100, {0.2, 0.0});
+    // Need to use a non-conflicting osm ID range for each map, as they
+    // all get merged during tile building, and we don't want a weirdly connected
+    // graph because IDs are shared
+    const int initial_osm_id = 100;
+    valhalla::test::mapgen::build_pbf(nodemap, ways2, {}, {}, "map2.pbf", initial_osm_id);
+    node::e.second = {nodemap["e"].lon, nodemap["e"].lat};
+    node::f.second = {nodemap["f"].lon, nodemap["f"].lat};
+    node::g.second = {nodemap["g"].lon, nodemap["g"].lat};
+  }
 
-  auto nodemap3 = valhalla::test::mapgen::map_to_coordinates(map3, 100, {0.3, 0.0});
-  const int initial_osm_id_3 = 200;
-  valhalla::test::mapgen::build_pbf(nodemap3, ways3, {}, relations3, "map3.pbf", initial_osm_id_3);
-  node::h.second = {nodemap3["h"].lon, nodemap3["h"].lat};
-  node::i.second = {nodemap3["i"].lon, nodemap3["i"].lat};
-  node::j.second = {nodemap3["j"].lon, nodemap3["j"].lat};
-  node::k.second = {nodemap3["k"].lon, nodemap3["k"].lat};
-  node::l.second = {nodemap3["l"].lon, nodemap3["l"].lat};
-  node::m.second = {nodemap3["m"].lon, nodemap3["m"].lat};
-
-  write_config(config_file, test_dir);
+  {
+    auto nodemap = valhalla::test::mapgen::map_to_coordinates(map3, 100, {0.3, 0.0});
+    const int initial_osm_id = 200;
+    valhalla::test::mapgen::build_pbf(nodemap, ways3, {}, relations3, "map3.pbf", initial_osm_id);
+    node::h.second = {nodemap["h"].lon, nodemap["h"].lat};
+    node::i.second = {nodemap["i"].lon, nodemap["i"].lat};
+    node::j.second = {nodemap["j"].lon, nodemap["j"].lat};
+    node::k.second = {nodemap["k"].lon, nodemap["k"].lat};
+    node::l.second = {nodemap["l"].lon, nodemap["l"].lat};
+    node::m.second = {nodemap["m"].lon, nodemap["m"].lat};
+  }
 
   boost::property_tree::ptree conf;
+  write_config(config_file, test_dir);
   rapidjson::read_json(config_file, conf);
 
-  // setup and purge
-  vb::GraphReader graph_reader(conf.get_child("mjolnir"));
-  for (const auto& level : vb::TileHierarchy::levels()) {
-    auto level_dir = graph_reader.tile_dir() + "/" + std::to_string(level.first);
-    if (boost::filesystem::exists(level_dir) && !boost::filesystem::is_empty(level_dir)) {
-      boost::filesystem::remove_all(level_dir);
+  {
+    vb::GraphReader graph_reader(conf.get_child("mjolnir"));
+    for (const auto& level : vb::TileHierarchy::levels()) {
+      auto level_dir = graph_reader.tile_dir() + "/" + std::to_string(level.first);
+      if (boost::filesystem::exists(level_dir) && !boost::filesystem::is_empty(level_dir)) {
+        boost::filesystem::remove_all(level_dir);
+      }
     }
   }
 
-  // Set up the temporary (*.bin) files used during processing
-  std::string ways_file = "test_ways_trivial.bin";
-  std::string way_nodes_file = "test_way_nodes_trivial.bin";
-  std::string nodes_file = "test_nodes_trivial.bin";
-  std::string edges_file = "test_edges_trivial.bin";
-  std::string access_file = "test_access_trivial.bin";
-  std::string cr_from_file = "test_from_complex_restrictions_trivial.bin";
-  std::string cr_to_file = "test_to_complex_restrictions_trivial.bin";
-  std::string bss_nodes_file = "test_bss_nodes_file_trivial.bin";
+  {
+    const std::string ways_file = "test_ways_trivial.bin";
+    const std::string way_nodes_file = "test_way_nodes_trivial.bin";
+    const std::string nodes_file = "test_nodes_trivial.bin";
+    const std::string edges_file = "test_edges_trivial.bin";
+    const std::string access_file = "test_access_trivial.bin";
+    const std::string cr_from_file = "test_from_complex_restrictions_trivial.bin";
+    const std::string cr_to_file = "test_to_complex_restrictions_trivial.bin";
+    const std::string bss_nodes_file = "test_bss_nodes_file_trivial.bin";
 
-  // Parse Utrecht OSM data
-  auto osmdata =
-      vj::PBFGraphParser::Parse(conf.get_child("mjolnir"), {"map1.pbf", "map2.pbf", "map3.pbf"},
-                                ways_file, way_nodes_file, access_file, cr_from_file, cr_to_file,
-                                bss_nodes_file);
+    auto osmdata =
+        vj::PBFGraphParser::Parse(conf.get_child("mjolnir"), {"map1.pbf", "map2.pbf", "map3.pbf"},
+                                  ways_file, way_nodes_file, access_file, cr_from_file, cr_to_file,
+                                  bss_nodes_file);
 
-  // Build the graph using the OSMNodes and OSMWays from the parser
-  vj::GraphBuilder::Build(conf, osmdata, ways_file, way_nodes_file, nodes_file, edges_file,
-                          cr_from_file, cr_to_file);
+    vj::GraphBuilder::Build(conf, osmdata, ways_file, way_nodes_file, nodes_file, edges_file,
+                            cr_from_file, cr_to_file);
 
-  // Enhance the local level of the graph. This adds information to the local
-  // level that is usable across all levels (density, administrative
-  // information (and country based attribution), edge transition logic, etc.
-  vj::GraphEnhancer::Enhance(conf, osmdata, access_file);
+    vj::GraphEnhancer::Enhance(conf, osmdata, access_file);
 
-  // Validate the graph and add information that cannot be added until
-  // full graph is formed.
-  vj::GraphValidator::Validate(conf);
+    vj::GraphValidator::Validate(conf);
+  }
 
   ASSERT_PRED1(filesystem::exists, test_dir + "/2/000/519/121.gph")
       << "Still no expected tile, did the actual fname on disk change?";
