@@ -103,7 +103,7 @@ std::string trim(std::string s) {
 /**
  * Given a string that's an "ASCII map", will decide on coordinates
  * for the nodes drawn on the grid.
- * 
+ *
  * @returns a dictionary of node IDs to lon/lat values
  */
 inline nodemap map_to_coordinates(const std::string& map,
@@ -164,7 +164,7 @@ inline nodemap map_to_coordinates(const std::string& map,
       if (std::isalnum(ch)) {
         // Always project west, then south, for consistency
         double lon = topleft.lon + grid_to_degree * x;
-        double lat = topleft.lat + grid_to_degree * y;
+        double lat = topleft.lat - grid_to_degree * y;
         result.insert({std::string(1, ch), {lon, lat}});
       }
     }
