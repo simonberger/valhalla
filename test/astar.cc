@@ -32,6 +32,8 @@
 #include "thor/worker.h"
 #include "tyr/serializers.h"
 
+#include "util/mapgen.h"
+
 #include <valhalla/proto/directions.pb.h>
 #include <valhalla/proto/options.pb.h>
 #include <valhalla/proto/trip.pb.h>
@@ -66,41 +68,68 @@ namespace {
 // first test is just a square set of roads
 //
 //       0  2
-// a----->--<-----b
-// |              |
-// v 1          3 v
-// |              |
-// ^ 4          7 ^
-// |              |
-// c----->--<-----d
-//       5  6
+const std::string map1 = R"(
+   a----->--<-----b
+   |              |
+   v 1          3 v
+   |              |
+   ^ 4          7 ^
+   |              |
+   c----->--<-----d
+         5  6
+)";
+
+const valhalla::test::mapgen::props ways1 = {{"ab", {{"highway", "primary"}}},
+                                             {"bd", {{"highway", "primary"}}},
+                                             {"ac", {{"highway", "primary"}}},
+                                             {"dc", {{"highway", "primary"}}}};
+
 //
 // second test is a triangle set of roads, where the height of the triangle is
 // about a third of its width.
-//
-//      8  10
-//  e--->--<---f
-//  \         /
-// 9 v       v 11
-//    \     /
-//  12 ^   ^ 13
-//      \ /
-//       g
-//
-//
+
+const std::string map2 = R"(
+        8  10
+    e--->--<---f
+    \         /
+   9 v       v 11
+      \     /
+    12 ^   ^ 13
+        \ /
+         g
+)";
+const valhalla::test::mapgen::props ways2 = {{"ef", {{"highway", "primary"}}},
+                                             {"eg", {{"highway", "primary"}}},
+                                             {"fg", {{"highway", "primary"}}}};
+
 // Third test has a complex turn restriction preventing K->H->I->L  (marked with R)
 // which should force the algorithm to take the detour via the J->M edge
 // if starting at K and heading to L
 //
-//   14  16   17  19
-// h-->--<--i-->--<--j
-// |    R   |        |
-// v 15     v 18     v 20
-// |R     R |        |
-// ^ 21     ^ 22     ^ 24
-// |        |        |
-// k        l-->--<--m
-//            23  25
+const std::string map3 = R"(
+     14  16   17  19
+   h-->--<--i-->--<--j
+   |    R   |        |
+   v 15     v 18     v 20
+   |R     R |        |
+   ^ 21     ^ 22     ^ 24
+   |        |        |
+   k        l-->--<--m
+              23  25
+)";
+const valhalla::test::mapgen::props ways3 = {{"kh", {{"highway", "primary"}}},
+                                             {"hi", {{"highway", "primary"}}},
+                                             {"ij", {{"highway", "primary"}}},
+                                             {"lm", {{"highway", "primary"}}},
+                                             {"mj", {{"highway", "primary"}}},
+                                             {"il", {{"highway", "primary"}}}};
+
+const valhalla::test::mapgen::relations relations3 = {
+    {{valhalla::test::mapgen::member{valhalla::test::mapgen::way, "kh", "from"},
+      {valhalla::test::mapgen::member{valhalla::test::mapgen::way, "il", "to"}},
+      {valhalla::test::mapgen::member{valhalla::test::mapgen::way, "hi", "via"}}},
+     {{"type", "restriction"}, {"restriction", "no_u_turn"}}}};
+
 //
 const std::string test_dir = "test/data/fake_tiles_astar";
 const vb::GraphId tile_id = vb::TileHierarchy::GetGraphId({.125, .125}, 2);
@@ -110,241 +139,118 @@ GraphId make_graph_id(uint32_t id) {
 }
 
 namespace node {
-std::pair<vb::GraphId, vm::PointLL> a({tile_id.tileid(), tile_id.level(), 0}, {0.01, 0.10});
-std::pair<vb::GraphId, vm::PointLL> b({tile_id.tileid(), tile_id.level(), 1}, {0.10, 0.10});
-std::pair<vb::GraphId, vm::PointLL> c({tile_id.tileid(), tile_id.level(), 2}, {0.01, 0.01});
-std::pair<vb::GraphId, vm::PointLL> d({tile_id.tileid(), tile_id.level(), 3}, {0.10, 0.01});
+std::pair<vb::GraphId, vm::PointLL> a({tile_id.tileid(), tile_id.level(), 0}, {});
+std::pair<vb::GraphId, vm::PointLL> b({tile_id.tileid(), tile_id.level(), 1}, {});
+std::pair<vb::GraphId, vm::PointLL> c({tile_id.tileid(), tile_id.level(), 2}, {});
+std::pair<vb::GraphId, vm::PointLL> d({tile_id.tileid(), tile_id.level(), 3}, {});
 
-std::pair<vb::GraphId, vm::PointLL> e({tile_id.tileid(), tile_id.level(), 4}, {0.21, 0.14});
-std::pair<vb::GraphId, vm::PointLL> f({tile_id.tileid(), tile_id.level(), 5}, {0.20, 0.14});
-std::pair<vb::GraphId, vm::PointLL> g({tile_id.tileid(), tile_id.level(), 6}, {0.25, 0.11});
+std::pair<vb::GraphId, vm::PointLL> e({tile_id.tileid(), tile_id.level(), 4}, {});
+std::pair<vb::GraphId, vm::PointLL> f({tile_id.tileid(), tile_id.level(), 5}, {});
+std::pair<vb::GraphId, vm::PointLL> g({tile_id.tileid(), tile_id.level(), 6}, {});
 
-std::pair<vb::GraphId, vm::PointLL> h({tile_id.tileid(), tile_id.level(), 7}, {0.00, 0.10});
-std::pair<vb::GraphId, vm::PointLL> i({tile_id.tileid(), tile_id.level(), 8}, {0.10, 0.10});
-std::pair<vb::GraphId, vm::PointLL> j({tile_id.tileid(), tile_id.level(), 9}, {0.20, 0.10});
-std::pair<vb::GraphId, vm::PointLL> k({tile_id.tileid(), tile_id.level(), 10}, {0.00, 0.01});
-std::pair<vb::GraphId, vm::PointLL> l({tile_id.tileid(), tile_id.level(), 11}, {0.10, 0.01});
-std::pair<vb::GraphId, vm::PointLL> m({tile_id.tileid(), tile_id.level(), 12}, {0.20, 0.01});
+std::pair<vb::GraphId, vm::PointLL> h({tile_id.tileid(), tile_id.level(), 7}, {});
+std::pair<vb::GraphId, vm::PointLL> i({tile_id.tileid(), tile_id.level(), 8}, {});
+std::pair<vb::GraphId, vm::PointLL> j({tile_id.tileid(), tile_id.level(), 9}, {});
+std::pair<vb::GraphId, vm::PointLL> k({tile_id.tileid(), tile_id.level(), 10}, {});
+std::pair<vb::GraphId, vm::PointLL> l({tile_id.tileid(), tile_id.level(), 11}, {});
+std::pair<vb::GraphId, vm::PointLL> m({tile_id.tileid(), tile_id.level(), 12}, {});
 } // namespace node
-
-void make_tile() {
-  // Don't recreate tiles if they already exist (leads to silent corruption of tiles)
-  if (filesystem::exists(test_dir)) {
-    return;
-  }
-
-  using namespace valhalla::mjolnir;
-
-  GraphTileBuilder tile(test_dir, tile_id, false);
-
-  // Set the base lat,lon of the tile
-  uint32_t id = tile_id.tileid();
-  const auto& tl = TileHierarchy::levels().rbegin();
-  PointLL base_ll = tl->second.tiles.Base(id);
-  tile.header_builder().set_base_ll(base_ll);
-
-  uint32_t edge_index = 0;
-
-  auto add_node = [&](const std::pair<vb::GraphId, vm::PointLL>& v, const uint32_t edge_count) {
-    NodeInfo node_builder;
-    node_builder.set_latlng(base_ll, v.second);
-    // node_builder.set_road_class(RoadClass::kSecondary);
-    node_builder.set_access(vb::kAllAccess);
-    node_builder.set_edge_count(edge_count);
-    node_builder.set_edge_index(edge_index);
-    node_builder.set_timezone(1);
-    edge_index += edge_count;
-    tile.nodes().emplace_back(node_builder);
-  };
-
-  auto add_edge = [&](const std::pair<vb::GraphId, vm::PointLL>& u,
-                      const std::pair<vb::GraphId, vm::PointLL>& v, const uint32_t localedgeidx,
-                      const uint32_t opposing_edge_index, const bool forward) {
-    DirectedEdgeBuilder edge_builder({}, v.first, forward, u.second.Distance(v.second) + .5, 1, 1,
-                                     baldr::Use::kRoad, baldr::RoadClass::kMotorway, localedgeidx,
-                                     false, 0, 0, false);
-    edge_builder.set_opp_index(opposing_edge_index);
-    edge_builder.set_forwardaccess(vb::kAllAccess);
-    edge_builder.set_reverseaccess(vb::kAllAccess);
-    edge_builder.set_free_flow_speed(100);
-    edge_builder.set_constrained_flow_speed(10);
-    std::vector<vm::PointLL> shape = {u.second, u.second.MidPoint(v.second), v.second};
-    if (!forward) {
-      std::reverse(shape.begin(), shape.end());
-    }
-    bool added;
-    // make more complex edge geom so that there are 3 segments, affine combination doesnt properly
-    // handle arcs but who cares
-    uint32_t edge_info_offset = tile.AddEdgeInfo(localedgeidx, u.first, v.first, 123, // way_id
-                                                 0, 0,
-                                                 120, // speed limit in kph
-                                                 shape, {std::to_string(localedgeidx)}, 0, added);
-    // assert(added);
-    edge_builder.set_edgeinfo_offset(edge_info_offset);
-    tile.directededges().emplace_back(edge_builder);
-  };
-
-  // first set of roads - Square
-  add_edge(node::a, node::b, 0, 0, true);
-  add_edge(node::a, node::c, 1, 0, true);
-  add_node(node::a, 2);
-
-  add_edge(node::b, node::a, 2, 0, false);
-  add_edge(node::b, node::d, 3, 1, true);
-  add_node(node::b, 2);
-
-  add_edge(node::c, node::a, 4, 1, false);
-  add_edge(node::c, node::d, 5, 0, true);
-  add_node(node::c, 2);
-
-  add_edge(node::d, node::c, 6, 1, false);
-  add_edge(node::d, node::b, 7, 1, false);
-  add_node(node::d, 2);
-
-  // second set of roads - Triangle
-  add_edge(node::e, node::f, 8, 0, true);
-  add_edge(node::e, node::g, 9, 0, true);
-  add_node(node::e, 2);
-
-  add_edge(node::f, node::e, 10, 0, false);
-  add_edge(node::f, node::g, 11, 1, true);
-  add_node(node::f, 2);
-
-  add_edge(node::g, node::e, 12, 0, false);
-  add_edge(node::g, node::f, 13, 1, false);
-  add_node(node::g, 2);
-
-  // Third set of roads - Complex restriction with detour
-  add_edge(node::h, node::i, 14, 0, true);
-  {
-    // we only set this to true for vias
-    tile.directededges().back().complex_restriction(true);
-  }
-  add_edge(node::h, node::k, 15, 0, true);
-  {
-    // preventing turn from 22 -> 16 -> 15  in the reverse direction
-    // in regards to bi-directional.  Forget about is the edge is
-    // oneway or not
-    //
-    // when we are an end of a restriction we set the modes that
-    // this restriction applies to.
-    tile.directededges().back().set_end_restriction(kAllAccess);
-    ComplexRestrictionBuilder complex_restr_edge_22_16_15;
-    complex_restr_edge_22_16_15.set_type(RestrictionType::kNoEntry);
-    complex_restr_edge_22_16_15.set_to_id(make_graph_id(22));
-    complex_restr_edge_22_16_15.set_from_id(make_graph_id(15));
-    std::vector<GraphId> vias;
-    vias.push_back(make_graph_id(16));
-    complex_restr_edge_22_16_15.set_via_list(vias);
-    complex_restr_edge_22_16_15.set_modes(kAllAccess);
-    tile.AddReverseComplexRestriction(complex_restr_edge_22_16_15);
-  }
-  add_node(node::h, 2);
-
-  add_edge(node::i, node::h, 16, 0, false);
-  {
-    // we only set this to true for vias
-    tile.directededges().back().complex_restriction(true);
-  }
-  add_edge(node::i, node::j, 17, 0, true);
-  add_edge(node::i, node::l, 18, 0, true);
-  {
-    // preventing turn from 21 -> 14 -> 18 in the reverse direction
-    // in regards to bi-directional.  Forget about is the edge is
-    // oneway or not
-    //
-    // when we are the end of a restriction we set the modes that
-    // this restriction applies to.
-    tile.directededges().back().set_end_restriction(kAllAccess);
-    ComplexRestrictionBuilder complex_restr_edge_21_14;
-    complex_restr_edge_21_14.set_type(RestrictionType::kNoEntry);
-    complex_restr_edge_21_14.set_to_id(make_graph_id(21));
-    complex_restr_edge_21_14.set_from_id(make_graph_id(18));
-    std::vector<GraphId> vias;
-    vias.push_back(make_graph_id(14));
-    complex_restr_edge_21_14.set_via_list(vias);
-    complex_restr_edge_21_14.set_modes(kAllAccess);
-    tile.AddReverseComplexRestriction(complex_restr_edge_21_14);
-  }
-  add_node(node::i, 3);
-
-  add_edge(node::j, node::i, 19, 1, false);
-  add_edge(node::j, node::m, 20, 0, true);
-  add_node(node::j, 2);
-
-  add_edge(node::k, node::h, 21, 1, false);
-  {
-    // Add first part of complex turn restriction CLOCKWISE direction
-    // preventing turn from 21 -> 14 -> 18
-    //
-    // when we are the start of a restriction we set the modes that
-    // this restriction applies to.
-    tile.directededges().back().set_start_restriction(kAllAccess);
-    ComplexRestrictionBuilder complex_restr_edge_21_14;
-    complex_restr_edge_21_14.set_type(RestrictionType::kNoEntry);
-    complex_restr_edge_21_14.set_to_id(make_graph_id(18));
-    complex_restr_edge_21_14.set_from_id(make_graph_id(21));
-    std::vector<GraphId> vias;
-    vias.push_back(make_graph_id(14));
-    complex_restr_edge_21_14.set_via_list(vias);
-    complex_restr_edge_21_14.set_modes(kAllAccess);
-    tile.AddForwardComplexRestriction(complex_restr_edge_21_14);
-  }
-  add_node(node::k, 1);
-
-  add_edge(node::l, node::i, 22, 2, false);
-  {
-    // Add complex turn restriction COUNTER CLOCKWISE direction
-    // preventing turn from 22 -> 16 -> 15
-    //
-    // when we are the start of a restriction we set the modes that
-    // this restriction applies to.
-    tile.directededges().back().set_start_restriction(kAllAccess);
-    ComplexRestrictionBuilder complex_restr_edge_22_16_15;
-    complex_restr_edge_22_16_15.set_type(RestrictionType::kNoEntry);
-    complex_restr_edge_22_16_15.set_to_id(make_graph_id(15));
-    complex_restr_edge_22_16_15.set_from_id(make_graph_id(22));
-    std::vector<GraphId> vias;
-    vias.push_back(make_graph_id(16));
-    complex_restr_edge_22_16_15.set_via_list(vias);
-    complex_restr_edge_22_16_15.set_modes(kAllAccess);
-    tile.AddForwardComplexRestriction(complex_restr_edge_22_16_15);
-  }
-
-  add_edge(node::l, node::m, 23, 0, true);
-  add_node(node::l, 2);
-
-  add_edge(node::m, node::j, 24, 1, false);
-  add_edge(node::m, node::l, 25, 1, false);
-  add_node(node::m, 2);
-
-  tile.StoreTileData();
-
-  GraphTileBuilder::tweeners_t tweeners;
-  GraphTile reloaded(test_dir, tile_id);
-  auto bins = GraphTileBuilder::BinEdges(&reloaded, tweeners);
-  GraphTileBuilder::AddBins(test_dir, &reloaded, bins);
-
-  ASSERT_PRED1(filesystem::exists, test_dir + "/2/000/519/120.gph")
-      << "Still no expected tile, did the actual fname on disk change?";
-}
 
 const std::string config_file = "test/test_trivial_path";
 
-void write_config(const std::string& filename) {
+void write_config(const std::string& filename,
+                  const std::string& tile_dir = "test/data/trivial_tiles") {
   std::ofstream file;
   try {
     file.open(filename, std::ios_base::trunc);
     file << "{ \
       \"mjolnir\": { \
       \"concurrency\": 1, \
-       \"tile_dir\": \"test/data/trivial_tiles\", \
+       \"tile_dir\": \"" +
+                tile_dir + "\", \
         \"admin\": \"" VALHALLA_SOURCE_DIR "test/data/netherlands_admin.sqlite\", \
          \"timezone\": \"" VALHALLA_SOURCE_DIR "test/data/not_needed.sqlite\" \
       } \
     }";
   } catch (...) {}
   file.close();
+}
+
+void make_tile() {
+
+  // Build the maps from the ASCII diagrams, and extract the generated lon,lat values
+  auto nodemap1 = valhalla::test::mapgen::map_to_coordinates(map1, 100, {0, 0});
+  const int initial_osm_id_1 = 0;
+  valhalla::test::mapgen::build_pbf(nodemap1, ways1, {}, {}, "map1.pbf", 0);
+  node::a.second = {nodemap1["a"].lon, nodemap1["a"].lat};
+  node::b.second = {nodemap1["b"].lon, nodemap1["b"].lat};
+  node::c.second = {nodemap1["c"].lon, nodemap1["c"].lat};
+  node::d.second = {nodemap1["d"].lon, nodemap1["d"].lat};
+
+  auto nodemap2 = valhalla::test::mapgen::map_to_coordinates(map2, 100, {0.2, 0.0});
+  const int initial_osm_id_2 = 100; // Need to start on a custom OSM ID because these maps will be
+                                    // merged into a single Valhalla map.  We don't want
+                                    // ID overlaps to cause things to get joined in the graph.
+  valhalla::test::mapgen::build_pbf(nodemap2, ways2, {}, {}, "map2.pbf", initial_osm_id_2);
+  node::e.second = {nodemap2["e"].lon, nodemap2["e"].lat};
+  node::f.second = {nodemap2["f"].lon, nodemap2["f"].lat};
+  node::g.second = {nodemap2["g"].lon, nodemap2["g"].lat};
+
+  auto nodemap3 = valhalla::test::mapgen::map_to_coordinates(map3, 100, {0.3, 0.0});
+  const int initial_osm_id_3 = 200;
+  valhalla::test::mapgen::build_pbf(nodemap3, ways3, {}, relations3, "map3.pbf", initial_osm_id_3);
+  node::h.second = {nodemap3["h"].lon, nodemap3["h"].lat};
+  node::i.second = {nodemap3["i"].lon, nodemap3["i"].lat};
+  node::j.second = {nodemap3["j"].lon, nodemap3["j"].lat};
+  node::k.second = {nodemap3["k"].lon, nodemap3["k"].lat};
+  node::l.second = {nodemap3["l"].lon, nodemap3["l"].lat};
+  node::m.second = {nodemap3["m"].lon, nodemap3["m"].lat};
+
+  write_config(config_file, test_dir);
+
+  boost::property_tree::ptree conf;
+  rapidjson::read_json(config_file, conf);
+
+  // setup and purge
+  vb::GraphReader graph_reader(conf.get_child("mjolnir"));
+  for (const auto& level : vb::TileHierarchy::levels()) {
+    auto level_dir = graph_reader.tile_dir() + "/" + std::to_string(level.first);
+    if (boost::filesystem::exists(level_dir) && !boost::filesystem::is_empty(level_dir)) {
+      boost::filesystem::remove_all(level_dir);
+    }
+  }
+
+  // Set up the temporary (*.bin) files used during processing
+  std::string ways_file = "test_ways_trivial.bin";
+  std::string way_nodes_file = "test_way_nodes_trivial.bin";
+  std::string nodes_file = "test_nodes_trivial.bin";
+  std::string edges_file = "test_edges_trivial.bin";
+  std::string access_file = "test_access_trivial.bin";
+  std::string cr_from_file = "test_from_complex_restrictions_trivial.bin";
+  std::string cr_to_file = "test_to_complex_restrictions_trivial.bin";
+  std::string bss_nodes_file = "test_bss_nodes_file_trivial.bin";
+
+  // Parse Utrecht OSM data
+  auto osmdata =
+      vj::PBFGraphParser::Parse(conf.get_child("mjolnir"), {"map1.pbf", "map2.pbf", "map3.pbf"},
+                                ways_file, way_nodes_file, access_file, cr_from_file, cr_to_file,
+                                bss_nodes_file);
+
+  // Build the graph using the OSMNodes and OSMWays from the parser
+  vj::GraphBuilder::Build(conf, osmdata, ways_file, way_nodes_file, nodes_file, edges_file,
+                          cr_from_file, cr_to_file);
+
+  // Enhance the local level of the graph. This adds information to the local
+  // level that is usable across all levels (density, administrative
+  // information (and country based attribution), edge transition logic, etc.
+  vj::GraphEnhancer::Enhance(conf, osmdata, access_file);
+
+  // Validate the graph and add information that cannot be added until
+  // full graph is formed.
+  vj::GraphValidator::Validate(conf);
+
+  ASSERT_PRED1(filesystem::exists, test_dir + "/2/000/519/121.gph")
+      << "Still no expected tile, did the actual fname on disk change?";
 }
 
 void create_costing_options(Options& options) {
