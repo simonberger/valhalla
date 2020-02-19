@@ -112,7 +112,8 @@ valhalla::Api build_and_route(const std::string& mapstring,
                               const double gridsize,
                               const vtm::props& ways,
                               const std::string& from,
-                              const std::string& to const std::string& costing = "auto") {
+                              const std::string& to,
+                              const std::string& costing = "auto") {
 
   // Come up with a unique name for where to put the data for this test
   const ::testing::TestInfo* const test_info =
@@ -171,6 +172,9 @@ TEST(EndToEnd, TurnRight) {
   EXPECT_EQ(leg.maneuver(0).type(), valhalla::DirectionsLeg_Maneuver_Type_kStart);
   EXPECT_EQ(leg.maneuver(1).type(), valhalla::DirectionsLeg_Maneuver_Type_kRight);
   EXPECT_EQ(leg.maneuver(2).type(), valhalla::DirectionsLeg_Maneuver_Type_kDestination);
+
+  EXPECT_EQ(leg.maneuver(0).street_name(0).value(), std::string("ABC"));
+  EXPECT_EQ(leg.maneuver(1).street_name(0).value(), std::string("BD"));
 }
 /************************************************************************************/
 TEST(EndToEnd, TurnLeft) {
@@ -196,6 +200,9 @@ TEST(EndToEnd, TurnLeft) {
   EXPECT_EQ(leg.maneuver(0).type(), valhalla::DirectionsLeg_Maneuver_Type_kStart);
   EXPECT_EQ(leg.maneuver(1).type(), valhalla::DirectionsLeg_Maneuver_Type_kLeft);
   EXPECT_EQ(leg.maneuver(2).type(), valhalla::DirectionsLeg_Maneuver_Type_kDestination);
+
+  EXPECT_EQ(leg.maneuver(0).street_name(0).value(), std::string("BD"));
+  EXPECT_EQ(leg.maneuver(1).street_name(0).value(), std::string("ABC"));
 }
 /************************************************************************************/
 
