@@ -109,9 +109,10 @@ boost::property_tree::ptree build_config(const std::string& tiledir) {
 }
 
 valhalla::Api build_and_route(const std::string& mapstring,
+                              const double gridsize,
                               const vtm::props& ways,
                               const std::string& from,
-                              const std::string& to) {
+                              const std::string& to const std::string& costing = "auto") {
 
   // Come up with a unique name for where to put the data for this test
   const ::testing::TestInfo* const test_info =
@@ -126,7 +127,7 @@ valhalla::Api build_and_route(const std::string& mapstring,
 
   boost::filesystem::create_directories(testdir);
 
-  auto nodemap = vtm::map_to_coordinates(mapstring, 100);
+  auto nodemap = vtm::map_to_coordinates(mapstring, gridsize);
   vtm::build_pbf(nodemap, ways, {}, {}, testdir + "/" + testname + ".pbf");
   build_valhalla_tiles(config, testdir + "/" + testname + ".pbf");
 
@@ -136,7 +137,7 @@ valhalla::Api build_and_route(const std::string& mapstring,
   valhalla::baldr::GraphReader reader(config.get_child("mjolnir"));
   valhalla::Api request;
 
-  auto request_json = build_simple_request(nodemap, from, to);
+  auto request_json = build_simple_request(nodemap, from, to, costing);
 
   valhalla::ParseApi(request_json.c_str(), valhalla::Options::route, request);
   loki_worker.route(request);
@@ -156,7 +157,11 @@ TEST(EndToEnd, TurnRight) {
 
   const vtm::props ways = {{"ABC", {{"highway", "primary"}}}, {"BD", {{"highway", "primary"}}}};
 
-  auto result = build_and_route(map, ways, "A", "D");
+  const std::string from = "A";
+  const std::string to = "D";
+  const std::string costing = "auto";
+  const double gridsize = 100;
+  auto result = build_and_route(map, gridsize, ways, from, to, costing);
 
   // Only expect one possible route
   EXPECT_EQ(result.directions().routes_size(), 1);
@@ -177,7 +182,11 @@ TEST(EndToEnd, TurnLeft) {
 
   const vtm::props ways = {{"ABC", {{"highway", "primary"}}}, {"BD", {{"highway", "primary"}}}};
 
-  auto result = build_and_route(map, ways, "D", "A");
+  const std::string from = "D";
+  const std::string to = "A";
+  const std::string costing = "auto";
+  const double gridsize = 100;
+  auto result = build_and_route(map, gridsize, ways, from, to, costing);
 
   // Only expect one possible route
   EXPECT_EQ(result.directions().routes_size(), 1);
