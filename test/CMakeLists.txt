@@ -34,6 +34,9 @@ foreach(test ${tests})
   set_target_properties(${test} PROPERTIES
     COMPILE_DEFINITIONS VALHALLA_SOURCE_DIR="${VALHALLA_SOURCE_DIR}/")
   target_link_libraries(${test} valhalla gtest gmock)
+  target_include_directories(${test} PRIVATE
+      ${VALHALLA_SOURCE_DIR}/third_party/protozero/include
+      ${VALHALLA_SOURCE_DIR}/third_party/libosmium/include)
 endforeach()
 
 set(cost_tests autocost bicyclecost motorcyclecost motorscootercost pedestriancost transitcost truckcost)
@@ -199,7 +202,7 @@ if(ENABLE_DATA_TOOLS)
   add_dependencies(run-thor_worker utrecht_tiles)
   add_dependencies(run-recover_shortcut utrecht_tiles)
   add_dependencies(run-minbb utrecht_tiles)
-  add_dependencies(run-astar whitelion_tiles roma_tiles reversed_whitelion_tiles bayfront_singapore_tiles ny_ar_tiles pa_ar_tiles nh_ar_tiles)
+  add_dependencies(run-astar whitelion_tiles roma_tiles reversed_whitelion_tiles bayfront_singapore_tiles ny_ar_tiles pa_ar_tiles nh_ar_tiles utrecht_tiles)
   if(ENABLE_HTTP)
     add_dependencies(run-http_tiles utrecht_tiles)
   endif()
@@ -259,3 +262,5 @@ endif()
 
 add_custom_target(check DEPENDS ${test_targets})
 add_custom_target(tests DEPENDS ${tests} ${cost_tests})
+
+add_subdirectory(gurka)
