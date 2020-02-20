@@ -9,11 +9,7 @@
  ******************************************************************************/
 #include "baldr/rapidjson_utils.h"
 #include "loki/worker.h"
-#include "mjolnir/graphbuilder.h"
-#include "mjolnir/graphenhancer.h"
-#include "mjolnir/graphtilebuilder.h"
-#include "mjolnir/graphvalidator.h"
-#include "mjolnir/pbfgraphparser.h"
+#include "mjolnir/util.h"
 #include "odin/worker.h"
 #include "test.h"
 #include "thor/worker.h"
@@ -32,27 +28,6 @@ boost::property_tree::ptree json_to_pt(const std::string& json) {
   boost::property_tree::ptree pt;
   rapidjson::read_json(ss, pt);
   return pt;
-}
-
-void build_valhalla_tiles(const boost::property_tree::ptree& config,
-                          const std::string& pbf_filename) {
-
-  const std::string tiledir = config.get<std::string>("mjolnir.tile_dir");
-  const std::string ways_file = tiledir + "/ways.bin";
-  const std::string way_nodes_file = tiledir + "/way_nodes.bin";
-  const std::string nodes_file = tiledir + "/nodes.bin";
-  const std::string edges_file = tiledir + "/edges.bin";
-  const std::string access_file = tiledir + "/access.bin";
-  const std::string cr_from_file = tiledir + "/cr_from.bin";
-  const std::string cr_to_file = tiledir + "/cr_to.bin";
-  const std::string bss_nodes_file = tiledir + "/bss_nodes.bin";
-  auto osmdata = vj::PBFGraphParser::Parse(config.get_child("mjolnir"), {pbf_filename}, ways_file,
-                                           way_nodes_file, access_file, cr_from_file, cr_to_file,
-                                           bss_nodes_file);
-  vj::GraphBuilder::Build(config, osmdata, ways_file, way_nodes_file, nodes_file, edges_file,
-                          cr_from_file, cr_to_file);
-  vj::GraphEnhancer::Enhance(config, osmdata, access_file);
-  vj::GraphValidator::Validate(config);
 }
 
 std::string build_simple_request(const vtm::nodemap& nodemap,
@@ -129,8 +104,10 @@ valhalla::Api build_and_route(const std::string& mapstring,
   boost::filesystem::create_directories(testdir);
 
   auto nodemap = vtm::map_to_coordinates(mapstring, gridsize);
-  vtm::build_pbf(nodemap, ways, {}, {}, testdir + "/" + testname + ".pbf");
-  build_valhalla_tiles(config, testdir + "/" + testname + ".pbf");
+  auto pbf_filename = testdir + "/" + testname + ".pbf";
+  vtm::build_pbf(nodemap, ways, {}, {}, pbf_filename);
+  vj::build_tile_set(config, {pbf_filename}, vj::BuildStage::kInitialize, vj::BuildStage::kValidate,
+                     false);
 
   valhalla::loki::loki_worker_t loki_worker(config);
   valhalla::thor::thor_worker_t thor_worker(config);
