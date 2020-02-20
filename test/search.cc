@@ -85,6 +85,7 @@ void make_tile() {
                                      Use::kRoad, RoadClass::kMotorway, localedgeidx, false, 0, 0,
                                      false);
     edge_builder.set_opp_index(opposing_edge_index);
+    edge_builder.set_opp_local_idx(opposing_edge_index);
     edge_builder.set_forwardaccess(kAllAccess);
     edge_builder.set_reverseaccess(kAllAccess);
     edge_builder.set_free_flow_speed(100);
@@ -387,10 +388,10 @@ TEST(Search, test_reachability_radius) {
   // It is complicated by the fact that u-turn detection and similar never
   // was iimplemented for Isochrone/Dijkstras
   auto expected_reach = 10;
-  search({ob, Location::StopType::BREAK, 10, 10, 0}, 2, expected_reach);
+  //search({ob, Location::StopType::BREAK, 10, 10, 0}, 2, expected_reach);
 
-  // LOGLN_WARN("set reachability right on to see we arent off by one");
-  // search({ob, Location::StopType::BREAK, 4, 4, 0}, 2, 4);
+   LOGLN_WARN("set reachability right on to see we arent off by one");
+   search({ob, Location::StopType::BREAK, 4, 4, 0}, 2, 4);
 
   // LOGLN_WARN("set reachability lower to see we give up early");
   // search({ob, Location::StopType::BREAK, 3, 3, 0}, 2, 3);
