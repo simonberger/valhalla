@@ -33,7 +33,7 @@
 #include "thor/worker.h"
 #include "tyr/serializers.h"
 
-#include "util/mapgen.h"
+#include "gurka/gurka.h"
 
 #include <valhalla/proto/directions.pb.h>
 #include <valhalla/proto/options.pb.h>
@@ -77,10 +77,10 @@ const std::string map1 = R"(
    c--------------d
 )";
 
-const valhalla::test::mapgen::props ways1 = {{"ab", {{"highway", "motorway"}}},
-                                             {"bd", {{"highway", "motorway"}}},
-                                             {"ac", {{"highway", "motorway"}}},
-                                             {"dc", {{"highway", "motorway"}}}};
+const gurka::ways ways1 = {{"ab", {{"highway", "motorway"}}},
+                           {"bd", {{"highway", "motorway"}}},
+                           {"ac", {{"highway", "motorway"}}},
+                           {"dc", {{"highway", "motorway"}}}};
 
 //
 // second test is a triangle set of roads, where the height of the triangle is
@@ -95,9 +95,9 @@ const std::string map2 = R"(
         \ /
          g
 )";
-const valhalla::test::mapgen::props ways2 = {{"ef", {{"highway", "residential"}, {"foot", "yes"}}},
-                                             {"eg", {{"highway", "residential"}, {"foot", "yes"}}},
-                                             {"fg", {{"highway", "residential"}, {"foot", "yes"}}}};
+const gurka::ways ways2 = {{"ef", {{"highway", "residential"}, {"foot", "yes"}}},
+                           {"eg", {{"highway", "residential"}, {"foot", "yes"}}},
+                           {"fg", {{"highway", "residential"}, {"foot", "yes"}}}};
 
 // Third test has a complex turn restriction preventing K->H->I->L  (marked with R)
 // which should force the algorithm to take the detour via the J->M edge
@@ -112,18 +112,14 @@ const std::string map3 = R"(
    |        |        |
    k        l8-------m
 )";
-const valhalla::test::mapgen::props ways3 = {{"kh", {{"highway", "motorway"}}},
-                                             {"hi", {{"highway", "motorway"}}},
-                                             {"ij", {{"highway", "motorway"}}},
-                                             {"lm", {{"highway", "motorway"}}},
-                                             {"mj", {{"highway", "motorway"}}},
-                                             {"il", {{"highway", "motorway"}}}};
+const gurka::ways ways3 = {{"kh", {{"highway", "motorway"}}}, {"hi", {{"highway", "motorway"}}},
+                           {"ij", {{"highway", "motorway"}}}, {"lm", {{"highway", "motorway"}}},
+                           {"mj", {{"highway", "motorway"}}}, {"il", {{"highway", "motorway"}}}};
 
-const valhalla::test::mapgen::relations relations3 = {
-    {{valhalla::test::mapgen::member{valhalla::test::mapgen::way, "kh", "from"},
-      {valhalla::test::mapgen::member{valhalla::test::mapgen::way, "il", "to"}},
-      {valhalla::test::mapgen::member{valhalla::test::mapgen::way, "hi", "via"}}},
-     {{"type", "restriction"}, {"restriction", "no_right_turn"}}}};
+const gurka::relations relations3 = {{{gurka::relation_member{gurka::way_member, "kh", "from"},
+                                       {gurka::relation_member{gurka::way_member, "il", "to"}},
+                                       {gurka::relation_member{gurka::way_member, "hi", "via"}}},
+                                      {{"type", "restriction"}, {"restriction", "no_right_turn"}}}};
 
 //
 const std::string test_dir = "test/data/fake_tiles_astar";
@@ -174,31 +170,31 @@ void make_tile() {
 
   {
     // Build the maps from the ASCII diagrams, and extract the generated lon,lat values
-    auto nodemap = valhalla::test::mapgen::map_to_coordinates(map1, gridsize, {0, 0.2});
+    auto nodemap = gurka::detail::map_to_coordinates(map1, gridsize, {0, 0.2});
     const int initial_osm_id = 0;
-    valhalla::test::mapgen::build_pbf(nodemap, ways1, {}, {}, test_dir + "/map1.pbf", initial_osm_id);
+    gurka::detail::build_pbf({conf, nodemap}, ways1, {}, {}, test_dir + "/map1.pbf", initial_osm_id);
     for (const auto& n : nodemap)
-      node_locations[n.first] = {n.second.lon, n.second.lat};
+      node_locations[n.first] = n.second;
   }
 
   {
-    auto nodemap = valhalla::test::mapgen::map_to_coordinates(map2, gridsize, {0.10, 0.2});
+    auto nodemap = gurka::detail::map_to_coordinates(map2, gridsize, {0.10, 0.2});
     // Need to use a non-conflicting osm ID range for each map, as they
     // all get merged during tile building, and we don't want a weirdly connected
     // graph because IDs are shared
     const int initial_osm_id = 100;
-    valhalla::test::mapgen::build_pbf(nodemap, ways2, {}, {}, test_dir + "/map2.pbf", initial_osm_id);
+    gurka::detail::build_pbf({conf, nodemap}, ways2, {}, {}, test_dir + "/map2.pbf", initial_osm_id);
     for (const auto& n : nodemap)
-      node_locations[n.first] = {n.second.lon, n.second.lat};
+      node_locations[n.first] = n.second;
   }
 
   {
-    auto nodemap = valhalla::test::mapgen::map_to_coordinates(map3, gridsize, {0.1, 0.1});
+    auto nodemap = gurka::detail::map_to_coordinates(map3, gridsize, {0.1, 0.1});
     const int initial_osm_id = 200;
-    valhalla::test::mapgen::build_pbf(nodemap, ways3, {}, relations3, test_dir + "/map3.pbf",
-                                      initial_osm_id);
+    gurka::detail::build_pbf({conf, nodemap}, ways3, {}, relations3, test_dir + "/map3.pbf",
+                             initial_osm_id);
     for (const auto& n : nodemap)
-      node_locations[n.first] = {n.second.lon, n.second.lat};
+      node_locations[n.first] = n.second;
   }
 
   {
