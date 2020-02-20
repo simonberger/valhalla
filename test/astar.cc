@@ -117,8 +117,8 @@ const gurka::ways ways3 = {{"kh", {{"highway", "motorway"}}}, {"hi", {{"highway"
                            {"mj", {{"highway", "motorway"}}}, {"il", {{"highway", "motorway"}}}};
 
 const gurka::relations relations3 = {{{gurka::relation_member{gurka::way_member, "kh", "from"},
-                                       {gurka::relation_member{gurka::way_member, "il", "to"}},
-                                       {gurka::relation_member{gurka::way_member, "hi", "via"}}},
+                                       gurka::relation_member{gurka::way_member, "il", "to"},
+                                       gurka::relation_member{gurka::way_member, "hi", "via"}},
                                       {{"type", "restriction"}, {"restriction", "no_right_turn"}}}};
 
 //

@@ -1,5 +1,5 @@
-#include "../test.h"
 #include "gurka.h"
+#include <gtest/gtest.h>
 
 using namespace valhalla;
 
@@ -86,10 +86,4 @@ TEST_F(Turns, TurnLeft) {
 
   EXPECT_EQ(leg.maneuver(0).street_name(0).value(), std::string("FEBC"));
   EXPECT_EQ(leg.maneuver(1).street_name(0).value(), std::string("FDB"));
-}
-/************************************************************************************/
-
-int main(int argc, char* argv[]) {
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
 }
