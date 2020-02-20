@@ -196,6 +196,8 @@ thor::ExpansionRecommendation Reach::ShouldExpand(baldr::GraphReader& graphreade
                                                   const thor::InfoRoutingType route_type) {
   if (bdedgelabels_.size() < max_reach_)
     return thor::ExpansionRecommendation::continue_expansion;
+
+  std::cout << "    STOPPING EXPANSION " << bdedgelabels_.size() << " " << max_reach_ << std::endl;
   return thor::ExpansionRecommendation::prune_expansion;
 }
 

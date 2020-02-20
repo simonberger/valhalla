@@ -759,7 +759,7 @@ Search(const std::vector<valhalla::baldr::Location>& locations,
     std::cout << "min_reach " << loc.min_outbound_reach_ << " " << loc.min_inbound_reach_
               << std::endl;
   }
-  std::cout << "access_mode " << costing->access_mode() << std::endl;
+  //std::cout << "access_mode " << costing->access_mode() << std::endl;
 
   LOGLN_WARN("calling handler");
   // setup the unique list of locations

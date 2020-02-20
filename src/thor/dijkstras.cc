@@ -142,6 +142,7 @@ void Dijkstras::ExpandForward(GraphReader& graphreader,
                               const bool from_transition,
                               uint64_t localtime,
                               int32_t seconds_of_week) {
+  std::cout << "Dijkstras::ExpandForward from " << pred.edgeid().id() << std::endl;
   // Get the tile and the node info. Skip if tile is null (can happen
   // with regional data sets) or if no access at the node.
   const GraphTile* tile = graphreader.GetGraphTile(node);
@@ -162,6 +163,7 @@ void Dijkstras::ExpandForward(GraphReader& graphreader,
 
   // Bail if we cant expand from here
   if (!costing_->Allowed(nodeinfo)) {
+    std::cout << "  pred not allowed " << pred.edgeid().id() << std::endl;
     return;
   }
 
@@ -186,23 +188,43 @@ void Dijkstras::ExpandForward(GraphReader& graphreader,
     // this path.
     if (directededge->is_shortcut() || es->set() == EdgeSet::kPermanent ||
         !(directededge->forwardaccess() & access_mode_)) {
+      std::cout << "  rejecting " << edgeid.id() << std::endl;
       continue;
     }
 
     // Check if the edge is allowed or if a restriction occurs
     EdgeStatus* todo = nullptr;
     bool has_time_restrictions = false;
+
+    // Only needed if you want to connect with a reverse path
+    const GraphTile* t2 = tile;
+    GraphId opp_pred = graphreader.GetOpposingEdgeId(pred.edgeid(), t2);
+    GraphId oppedgeid = graphreader.GetOpposingEdgeId(edgeid, t2);
     if (has_date_time_) {
       // With date time we check time dependent restrictions and access
       if (!costing_->Allowed(directededge, pred, tile, edgeid, localtime, nodeinfo->timezone(),
                              has_time_restrictions) ||
           costing_->Restricted(directededge, pred, bdedgelabels_, tile, edgeid, true, todo, localtime,
                                nodeinfo->timezone())) {
+        std::cout << "  denied " << edgeid.id() << "Allow "
+                  << costing_->Allowed(directededge, pred, tile, edgeid, localtime,
+                                       nodeinfo->timezone(), has_time_restrictions)
+                  << " Restricted: "
+                  << costing_->Restricted(directededge, pred, bdedgelabels_, tile, edgeid, true, todo,
+                                          localtime, nodeinfo->timezone())
+                  << std::endl;
         continue;
       }
     } else {
       if (!costing_->Allowed(directededge, pred, tile, edgeid, 0, 0, has_time_restrictions) ||
           costing_->Restricted(directededge, pred, bdedgelabels_, tile, edgeid, true)) {
+        std::cout << "  denied " << edgeid.id() << "Allow "
+                  << costing_->Allowed(directededge, pred, tile, edgeid, localtime,
+                                       nodeinfo->timezone(), has_time_restrictions)
+                  << " Restricted: "
+                  << costing_->Restricted(directededge, pred, bdedgelabels_, tile, edgeid, true, todo,
+                                          localtime, nodeinfo->timezone())
+                  << std::endl;
         continue;
       }
     }
@@ -225,12 +247,9 @@ void Dijkstras::ExpandForward(GraphReader& graphreader,
         adjacencylist_->decrease(es->index(), newsortcost);
         lab.Update(pred_idx, newcost, newsortcost, transition_cost, has_time_restrictions);
       }
+      std::cout << "  Update " << edgeid.id() << std::endl;
       continue;
     }
-
-    // Only needed if you want to connect with a reverse path
-    const GraphTile* t2 = tile;
-    GraphId oppedgeid = graphreader.GetOpposingEdgeId(edgeid, t2);
 
     // Add edge label, add to the adjacency list and set edge status
     uint32_t idx = bdedgelabels_.size();
@@ -238,6 +257,7 @@ void Dijkstras::ExpandForward(GraphReader& graphreader,
     bdedgelabels_.emplace_back(pred_idx, edgeid, oppedgeid, directededge, newcost, newcost.cost, 0.0f,
                                mode_, transition_cost, false, has_time_restrictions);
     adjacencylist_->add(idx);
+    std::cout << "  emplaced " << edgeid.id() << std::endl;
   }
 
   // Handle transitions - expand from the end node of each transition
@@ -278,6 +298,12 @@ void Dijkstras::Compute(google::protobuf::RepeatedPtrField<valhalla::Location>& 
     // invalid label indicates there are no edges that can be expanded.
     uint32_t predindex = adjacencylist_->pop();
     if (predindex == kInvalidLabel) {
+      std::cout << "    STOPPING EXPANSION" << std::endl;
+      std::cout << "bdedgelabels_ contains " << bdedgelabels_.size() << " edges   ";
+      for (auto label : bdedgelabels_) {
+        std::cout << label.edgeid().id() << " ";
+      }
+      std::cout << std::endl;
       return;
     }
 
@@ -310,6 +336,8 @@ void Dijkstras::ExpandReverse(GraphReader& graphreader,
                               const bool from_transition,
                               uint64_t localtime,
                               int32_t seconds_of_week) {
+  std::cout << "Dijkstras::ExpandReverse from " << pred.edgeid().id() << std::endl;
+
   // Get the tile and the node info. Skip if tile is null (can happen
   // with regional data sets) or if no access at the node.
   const GraphTile* tile = graphreader.GetGraphTile(node);
@@ -352,6 +380,8 @@ void Dijkstras::ExpandReverse(GraphReader& graphreader,
     // directed edge), if no access for this mode, or if edge is a shortcut
     if (!(directededge->reverseaccess() & access_mode_) || directededge->is_shortcut() ||
         es->set() == EdgeSet::kPermanent) {
+
+      std::cout << "  rejecting " << edgeid.id() << std::endl;
       continue;
     }
 
@@ -359,6 +389,7 @@ void Dijkstras::ExpandReverse(GraphReader& graphreader,
     const GraphTile* t2 = tile;
     auto oppedge = graphreader.GetOpposingEdgeId(edgeid, t2);
     if (t2 == nullptr) {
+      std::cout << "  rejecting nullptr " << edgeid.id() << std::endl;
       continue;
     }
     const DirectedEdge* opp_edge = t2->directededge(oppedge);
@@ -372,12 +403,14 @@ void Dijkstras::ExpandReverse(GraphReader& graphreader,
                                     nodeinfo->timezone(), has_time_restrictions) ||
           costing_->Restricted(directededge, pred, bdedgelabels_, tile, edgeid, false, todo,
                                localtime, nodeinfo->timezone())) {
+        std::cout << "  disallowed " << edgeid.id() << std::endl;
         continue;
       }
     } else {
       if (!costing_->AllowedReverse(directededge, pred, opp_edge, t2, oppedge, 0, 0,
                                     has_time_restrictions) ||
           costing_->Restricted(directededge, pred, bdedgelabels_, tile, edgeid, false)) {
+        std::cout << "  Restricted " << edgeid.id() << std::endl;
         continue;
       }
     }
@@ -400,6 +433,7 @@ void Dijkstras::ExpandReverse(GraphReader& graphreader,
         adjacencylist_->decrease(es->index(), newsortcost);
         lab.Update(pred_idx, newcost, newsortcost, transition_cost, has_time_restrictions);
       }
+      std::cout << "  Update " << edgeid.id() << std::endl;
       continue;
     }
 
@@ -409,6 +443,7 @@ void Dijkstras::ExpandReverse(GraphReader& graphreader,
     bdedgelabels_.emplace_back(pred_idx, edgeid, oppedge, directededge, newcost, newcost.cost, 0.0f,
                                mode_, transition_cost, false, has_time_restrictions);
     adjacencylist_->add(idx);
+    std::cout << "  emplaced " << edgeid.id() << std::endl;
   }
 
   // Handle transitions - expand from the end node of each transition
@@ -449,6 +484,12 @@ void Dijkstras::ComputeReverse(google::protobuf::RepeatedPtrField<valhalla::Loca
     // invalid label indicates there are no edges that can be expanded.
     uint32_t predindex = adjacencylist_->pop();
     if (predindex == kInvalidLabel) {
+      std::cout << "    STOPPING EXPANSION" << std::endl;
+      std::cout << "bdedgelabels_ contains " << bdedgelabels_.size() << " edges   ";
+      for (auto label : bdedgelabels_) {
+        std::cout << label.edgeid().id() << " ";
+      }
+      std::cout << std::endl;
       return;
     }
 
