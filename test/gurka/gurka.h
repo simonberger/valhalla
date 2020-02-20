@@ -228,7 +228,7 @@ map_to_coordinates(const std::string& map,
  * Given a map of node locations, ways, node properties and relations, will
  * generate an OSM compatible PBF file, suitable for loading into Valhalla
  */
-inline void build_pbf(const map& map,
+inline void build_pbf(const std::unordered_map<std::string, midgard::PointLL>& node_locations,
                       const ways& ways,
                       const nodes& nodes,
                       const relations& relations,
@@ -258,7 +258,7 @@ inline void build_pbf(const map& map,
   }
 
   for (auto& used_node : used_nodes) {
-    if (map.nodes.count(used_node) == 0) {
+    if (node_locations.count(used_node) == 0) {
       throw std::runtime_error("Node " + used_node + " was referred to but was not in the ASCII map");
     }
   }
@@ -266,11 +266,11 @@ inline void build_pbf(const map& map,
   std::unordered_map<std::string, int> node_id_map;
   std::unordered_map<std::string, int> node_osm_id_map;
   int id = 0;
-  for (auto& loc : map.nodes) {
+  for (auto& loc : node_locations) {
     node_id_map[loc.first] = id++;
   }
   int osm_id = initial_osm_id;
-  for (auto& loc : map.nodes) {
+  for (auto& loc : node_locations) {
     if (used_nodes.count(loc.first) > 0) {
       node_osm_id_map[loc.first] = osm_id++;
 
@@ -388,7 +388,7 @@ map buildtiles(const std::string& ascii_map,
 
   auto pbf_filename = workdir + "/map.pbf";
   std::cerr << "[          ] generating map PBF at " << pbf_filename << std::endl;
-  detail::build_pbf(result, ways, {}, {}, pbf_filename);
+  detail::build_pbf(result.nodes, ways, {}, {}, pbf_filename);
   std::cerr << "[          ] building tiles in " << result.config.get<std::string>("mjolnir.tile_dir")
             << std::endl;
   midgard::logging::Configure({{"type", ""}});

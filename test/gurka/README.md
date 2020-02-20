@@ -152,3 +152,13 @@ route(const gurka::map& map, const std::vector<std::string>& waypoints, const st
 
 This performs a valhalla route request on the map.  You can use named waypoints that you've drawn
 on the map as positions to route between.
+
+
+# Utility functions
+
+The main purpose of Gurka is to write high-level, end-to-end tests on minimaps.  There are some
+low-level helper functions available in case you want to do something a little more custom:
+
+  - `gurka::detail::build_config(workdir);` - builds a `boost::property_tree` for tile generation in `workdir`
+  - `gurka::detail::map_to_coordinates(ascii_map, gridsize);` - calculates coordinates for all the A-Za-z0-9 nodes in the `ascii_map` given the `gridsize`
+  - `gurka::detail::build_pbf(node_locations, ways, nodes, relations, pbf_filename);` - generates an OSM PBF for the nodes, ways, and relations you've defined.  The `nodemap` is the result of `gurka::detail::map_to_coordinates`
