@@ -147,13 +147,13 @@ void ConstructEdges(const OSMData& osmdata,
     for (auto ni = current_way_node_index; ni <= last_way_node_index; ni++) {
       const auto wn = (*way_nodes[ni]).node;
       if (wn.lat_ == kInvalidLatitude && wn.lng_ == kInvalidLongitude) {
-        LOG_ERROR("Node " + std::to_string(wn.osmid_) + " in way " + std::to_string(way.way_id()) +
-                  " has not had coordinates initialized");
+        LOG_WARN("Node " + std::to_string(wn.osmid_) + " in way " + std::to_string(way.way_id()) +
+                 " has not had coordinates initialized");
         valid = false;
       }
     }
     if (!valid) {
-      LOG_ERROR("Do not add edge!");
+      LOG_WARN("Do not add edge!");
       current_way_node_index = last_way_node_index + 1;
       continue;
     }
