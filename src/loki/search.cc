@@ -457,10 +457,10 @@ struct bin_handler_t {
     auto tile = begin->cur_tile;
     auto edges = tile->GetBin(begin->bin_index);
     if (edges.size() > 0) {
-      LOGLN_WARN("handle_bin got edges");
-      // for (auto edge_id : edges) {
-      //  std::cout << edge_id.id() << " ";
-      //}
+      std::cout << "handle_bin got " << edges.size() << " edges" << std::endl;
+      for (auto edge_id : edges) {
+        std::cout << edge_id.id() << " ";
+      }
       std::cout << std::endl;
     }
     for (auto edge_id : edges) {
@@ -755,11 +755,7 @@ Search(const std::vector<valhalla::baldr::Location>& locations,
     LOG_WARN("empty");
     return std::unordered_map<valhalla::baldr::Location, PathLocation>{};
   }
-  for (const auto& loc : locations) {
-    std::cout << "min_reach " << loc.min_outbound_reach_ << " " << loc.min_inbound_reach_
-              << std::endl;
-  }
-  //std::cout << "access_mode " << costing->access_mode() << std::endl;
+  std::cout << "access_mode " << costing->access_mode() << std::endl;
 
   LOGLN_WARN("calling handler");
   // setup the unique list of locations

@@ -19,8 +19,8 @@ namespace sif {
  * @param pbf_costing_options A mutable protocol buffer where the parsed json values will be stored.
  */
 void ParseNoCostCostOptions(const rapidjson::Document& doc,
-                          const std::string& costing_options_key,
-                          CostingOptions* pbf_costing_options);
+                            const std::string& costing_options_key,
+                            CostingOptions* pbf_costing_options);
 
 /**
  * Create an route cost method. This is generally shortest time but uses

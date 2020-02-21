@@ -1,5 +1,5 @@
-#include "sif/costconstants.h"
 #include "sif/nocost.h"
+#include "sif/costconstants.h"
 
 #include "baldr/accessrestriction.h"
 #include "baldr/directededge.h"
@@ -372,12 +372,12 @@ NoCost::NoCost(const Costing costing, const Options& options)
 
 // Check if access is allowed on the specified edge.
 bool NoCost::Allowed(const baldr::DirectedEdge* edge,
-                       const EdgeLabel& pred,
-                       const baldr::GraphTile*& tile,
-                       const baldr::GraphId& edgeid,
-                       const uint64_t current_time,
-                       const uint32_t tz_index,
-                       bool& has_time_restrictions) const {
+                     const EdgeLabel& pred,
+                     const baldr::GraphTile*& tile,
+                     const baldr::GraphId& edgeid,
+                     const uint64_t current_time,
+                     const uint32_t tz_index,
+                     bool& has_time_restrictions) const {
   // Check access, U-turn, and simple turn restriction.
   // Allow U-turns at dead-end nodes in case the origin is inside
   // a not thru region and a heading selected an edge entering the
@@ -398,13 +398,13 @@ bool NoCost::Allowed(const baldr::DirectedEdge* edge,
 // Checks if access is allowed for an edge on the reverse path (from
 // destination towards origin). Both opposing edges are provided.
 bool NoCost::AllowedReverse(const baldr::DirectedEdge* edge,
-                              const EdgeLabel& pred,
-                              const baldr::DirectedEdge* opp_edge,
-                              const baldr::GraphTile*& tile,
-                              const baldr::GraphId& opp_edgeid,
-                              const uint64_t current_time,
-                              const uint32_t tz_index,
-                              bool& has_time_restrictions) const {
+                            const EdgeLabel& pred,
+                            const baldr::DirectedEdge* opp_edge,
+                            const baldr::GraphTile*& tile,
+                            const baldr::GraphId& opp_edgeid,
+                            const uint64_t current_time,
+                            const uint32_t tz_index,
+                            bool& has_time_restrictions) const {
   // Check access, U-turn, and simple turn restriction.
   // Allow U-turns at dead-end nodes.
   if (!(opp_edge->forwardaccess() & kAllAccess) ||
@@ -416,14 +416,14 @@ bool NoCost::AllowedReverse(const baldr::DirectedEdge* edge,
     return false;
   }
 
-  return DynamicCost::EvaluateRestrictions(kAllAccess, edge, tile, opp_edgeid, current_time,
-                                           tz_index, has_time_restrictions);
+  return DynamicCost::EvaluateRestrictions(kAllAccess, edge, tile, opp_edgeid, current_time, tz_index,
+                                           has_time_restrictions);
 }
 
 // Get the cost to traverse the edge in seconds
 Cost NoCost::EdgeCost(const baldr::DirectedEdge* edge,
-                        const baldr::GraphTile* tile,
-                        const uint32_t seconds) const {
+                      const baldr::GraphTile* tile,
+                      const uint32_t seconds) const {
   auto speed = tile->GetSpeed(edge, flow_mask_, seconds);
   float factor = (edge->use() == Use::kFerry) ? ferry_factor_ : density_factor_[edge->density()];
 
@@ -439,8 +439,8 @@ Cost NoCost::EdgeCost(const baldr::DirectedEdge* edge,
 
 // Returns the time (in seconds) to make the transition from the predecessor
 Cost NoCost::TransitionCost(const baldr::DirectedEdge* edge,
-                              const baldr::NodeInfo* node,
-                              const EdgeLabel& pred) const {
+                            const baldr::NodeInfo* node,
+                            const EdgeLabel& pred) const {
   // Get the transition cost for country crossing, ferry, gate, toll booth,
   // destination only, alley, maneuver penalty
   uint32_t idx = pred.opp_local_idx();
@@ -484,9 +484,9 @@ Cost NoCost::TransitionCost(const baldr::DirectedEdge* edge,
 // pred is the opposing current edge in the reverse tree
 // edge is the opposing predecessor in the reverse tree
 Cost NoCost::TransitionCostReverse(const uint32_t idx,
-                                     const baldr::NodeInfo* node,
-                                     const baldr::DirectedEdge* pred,
-                                     const baldr::DirectedEdge* edge) const {
+                                   const baldr::NodeInfo* node,
+                                   const baldr::DirectedEdge* pred,
+                                   const baldr::DirectedEdge* edge) const {
   // Get the transition cost for country crossing, ferry, gate, toll booth,
   // destination only, alley, maneuver penalty
   Cost c = base_transition_cost(node, edge, pred, idx);
@@ -523,11 +523,9 @@ Cost NoCost::TransitionCostReverse(const uint32_t idx,
   return c;
 }
 
-
 cost_ptr_t CreateNoCost(const Costing costing, const Options& options) {
   return std::make_shared<NoCost>(costing, options);
 }
-
 
 } // namespace sif
 } // namespace valhalla

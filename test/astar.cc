@@ -172,7 +172,7 @@ void make_tile() {
     // Build the maps from the ASCII diagrams, and extract the generated lon,lat values
     auto nodemap = gurka::detail::map_to_coordinates(map1, gridsize, {0, 0.2});
     const int initial_osm_id = 0;
-    gurka::detail::build_pbf({conf, nodemap}, ways1, {}, {}, test_dir + "/map1.pbf", initial_osm_id);
+    gurka::detail::build_pbf(nodemap, ways1, {}, {}, test_dir + "/map1.pbf", initial_osm_id);
     for (const auto& n : nodemap)
       node_locations[n.first] = n.second;
   }
@@ -183,7 +183,7 @@ void make_tile() {
     // all get merged during tile building, and we don't want a weirdly connected
     // graph because IDs are shared
     const int initial_osm_id = 100;
-    gurka::detail::build_pbf({conf, nodemap}, ways2, {}, {}, test_dir + "/map2.pbf", initial_osm_id);
+    gurka::detail::build_pbf(nodemap, ways2, {}, {}, test_dir + "/map2.pbf", initial_osm_id);
     for (const auto& n : nodemap)
       node_locations[n.first] = n.second;
   }
@@ -191,8 +191,7 @@ void make_tile() {
   {
     auto nodemap = gurka::detail::map_to_coordinates(map3, gridsize, {0.1, 0.1});
     const int initial_osm_id = 200;
-    gurka::detail::build_pbf({conf, nodemap}, ways3, {}, relations3, test_dir + "/map3.pbf",
-                             initial_osm_id);
+    gurka::detail::build_pbf(nodemap, ways3, {}, relations3, test_dir + "/map3.pbf", initial_osm_id);
     for (const auto& n : nodemap)
       node_locations[n.first] = n.second;
   }
@@ -350,7 +349,7 @@ void TestTrivialPath(vt::PathAlgorithm& astar) {
   locations.push_back({node_locations["1"]});
   locations.push_back({node_locations["2"]});
 
-  const auto projections = loki::Search(locations, *reader, costs[int(mode)].get());
+  const auto projections = loki::Search(locations, *reader, costs[int(mode)]);
   valhalla::Location origin;
   {
     const auto& correlated = projections.at(locations[0]);
@@ -395,7 +394,7 @@ TEST(Astar, TestTrivialPathTriangle) {
   locations.push_back({node_locations["4"]});
   locations.push_back({node_locations["5"]});
 
-  const auto projections = loki::Search(locations, *reader, costs[int(mode)].get());
+  const auto projections = loki::Search(locations, *reader, costs[int(mode)]);
   valhalla::Location origin;
   {
     const auto& correlated = projections.at(locations[0]);
@@ -431,7 +430,7 @@ void TestPartialDuration(vt::PathAlgorithm& astar) {
   locations.push_back({node_locations["1"]});
   locations.push_back({node_locations["3"]});
 
-  auto projections = loki::Search(locations, *reader, costs[int(mode)].get());
+  auto projections = loki::Search(locations, *reader, costs[int(mode)]);
   valhalla::Location origin;
   {
     auto& correlated = projections.at(locations[0]);
@@ -644,7 +643,7 @@ TEST(Astar, TestTrivialPathNoUturns) {
   auto mode = cost->travel_mode();
   mode_costing[static_cast<uint32_t>(mode)] = cost;
 
-  const auto projections = vk::Search(locations, graph_reader, cost.get());
+  const auto projections = vk::Search(locations, graph_reader, cost);
   std::vector<PathLocation> path_location;
 
   for (const auto& loc : locations) {
@@ -1267,7 +1266,7 @@ TEST(Astar, TestBacktrackComplexRestrictionForwardDetourAfterRestriction) {
   locations.push_back({node_locations["6"]});
   locations.push_back({node_locations["7"]});
 
-  const auto projections = loki::Search(locations, *reader, costs[int(mode)].get());
+  const auto projections = loki::Search(locations, *reader, costs[int(mode)]);
 
   std::vector<PathLocation> path_location;
   for (const auto& loc : locations) {
@@ -1472,7 +1471,7 @@ TEST(ComplexRestriction, WalkVias) {
 
   std::vector<valhalla::baldr::Location> locations;
   locations.push_back({node_locations["7"]});
-  const auto projections = loki::Search(locations, *reader, costing.get());
+  const auto projections = loki::Search(locations, *reader, costing);
   const auto& correlated = projections.at(locations[0]);
 
   ASSERT_EQ(correlated.edges.size(), 2) << "Expected only 2 edges in snapping response";
@@ -1497,7 +1496,7 @@ TEST(ComplexRestriction, WalkVias) {
   {
     std::vector<valhalla::baldr::Location> via_locations;
     via_locations.push_back({node_locations["V"]});
-    const auto via_projections = loki::Search(via_locations, *reader, costing.get());
+    const auto via_projections = loki::Search(via_locations, *reader, costing);
     const auto& via_correlated = via_projections.at(via_locations[0]);
     ASSERT_EQ(via_correlated.edges.size(), 2) << "Should've found 2 edges for the via point";
 
