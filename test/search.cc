@@ -44,15 +44,19 @@ const std::string map1 = R"(
     |/
     C
 )";
+// const gurka::ways ways1 = {
+//    {"AB", {{"highway", "residential"}, {"foot", "yes"}}},
+//    {"AC", {{"highway", "residential"}, {"foot", "yes"}}},
+//    {"AD", {{"highway", "residential"}, {"foot", "yes"}}},
+//    {"BD", {{"highway", "residential"}, {"foot", "yes"}}},
+//    {"CD", {{"highway", "residential"}, {"foot", "yes"}}},
+//};
 const gurka::ways ways1 = {
-    {"AB", {{"highway", "residential"}, {"foot", "yes"}}},
-    {"AC", {{"highway", "residential"}, {"foot", "yes"}}},
-    {"AD", {{"highway", "residential"}, {"foot", "yes"}}},
-    {"BD", {{"highway", "residential"}, {"foot", "yes"}}},
-    {"CD", {{"highway", "residential"}, {"foot", "yes"}}},
+    {"BADB", {{"highway", "motorway"}, {"foot", "yes"}}},
+    {"ACD", {{"highway", "motorway"}, {"foot", "yes"}}},
 };
 
-const std::string tile_dir = "test/search_tiles";
+const std::string tile_dir = "test/data/search_tiles";
 const std::string config_file = "test/test_trivial_path";
 
 void write_config(const std::string& filename,
@@ -347,11 +351,20 @@ TEST(Search, test_reachability_radius) {
   std::cout << "Edges in tile " << std::endl;
   for (auto bin = 0; bin < 25; ++bin) {
     for (auto edge_id : tile->GetBin(bin)) {
-      std::cout << edge_id.id() << ", ";
+      // std::cout << edge_id.id() << ", ";
+      auto edge = reader.directededge(edge_id);
+      auto node = reader.GetEndNode(edge, tile);
+
+      auto edge_info = tile->edgeinfo(edge->edgeinfo_offset());
+      for (auto& name : edge_info.GetNames()) {
+        std::cout << name << " ";
+      }
+
       ++edges;
     }
   }
   std::cout << "\nfound " << edges << std::endl;
+  ASSERT_EQ(edges, 10);
 
   auto A = node_locations["A"];
   auto B = node_locations["B"];
