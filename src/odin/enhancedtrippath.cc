@@ -787,6 +787,24 @@ std::string EnhancedTripLeg_Edge::ToString() const {
   str += " | truck_route=";
   str += std::to_string(truck_route());
 
+  if (lane_connectivity_size() > 0) {
+    str += " | lane_connectivity=";
+    str = "[ ";
+    int lc_index = 0;
+    for (const auto& lc : lane_connectivity()) {
+      str += "(";
+      str += std::to_string(lc_index);
+      str += ")";
+      str += " from_way_id=";
+      str += std::to_string(lc.from_way_id());
+      str += " | from_lanes=";
+      str += lc.from_lanes();
+      str += " | to_lanes=";
+      str += lc.to_lanes();
+    }
+    str += " ]";
+  }
+
   if (turn_lanes_size() > 0) {
     str += " | turn_lanes=";
     str += TurnLanesToString();

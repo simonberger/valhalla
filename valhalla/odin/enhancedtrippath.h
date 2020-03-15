@@ -327,6 +327,20 @@ public:
     return mutable_edge_->truck_route();
   }
 
+  int lane_connectivity_size() const {
+    return mutable_edge_->lane_connectivity_size();
+  }
+
+  const ::google::protobuf::RepeatedPtrField<::valhalla::TripLeg_LaneConnectivity>&
+  lane_connectivity() const {
+    return mutable_edge_->lane_connectivity();
+  }
+
+  ::google::protobuf::RepeatedPtrField<::valhalla::TripLeg_LaneConnectivity>*
+  mutable_lane_connectivity() {
+    return mutable_edge_->mutable_lane_connectivity();
+  }
+
   int turn_lanes_size() const {
     return mutable_edge_->turn_lanes_size();
   }
